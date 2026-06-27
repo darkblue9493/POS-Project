@@ -381,6 +381,18 @@ select {
   text-decoration: none;
 }
 
+.danger-button {
+  color: var(--red);
+}
+
+body[data-app-mode="register"] .mode-links {
+  display: none;
+}
+
+body[data-app-mode="register"] .store-picker {
+  pointer-events: none;
+}
+
 .category-button.active,
 .segment.active,
 .pay-method.active {
@@ -621,8 +633,12 @@ th {
 }
 
 .item-form {
-  grid-template-columns: 1.3fr 1fr 130px 150px 130px 120px;
+  grid-template-columns: 1.3fr 1fr 110px 110px 110px 150px 130px 120px;
   align-items: end;
+}
+
+.promo-form {
+  grid-template-columns: 1.3fr 1.4fr 110px 120px 110px 120px;
 }
 
 .backoffice-note {
@@ -765,6 +781,10 @@ dialog::backdrop {
   }
 
   .item-form {
+    grid-template-columns: 1fr;
+  }
+
+  .promo-form {
     grid-template-columns: 1fr;
   }
 }

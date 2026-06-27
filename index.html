@@ -37,6 +37,7 @@
           <button class="tab-button" type="button" data-view="register" data-modes="register" title="Register">Register</button>
           <button class="tab-button" type="button" data-view="orders" data-modes="register back-office" title="Orders">Orders</button>
           <button class="tab-button" type="button" data-view="items" data-modes="back-office" title="Back Office">Back Office</button>
+          <button class="tab-button" type="button" data-view="promotions" data-modes="back-office" title="Promotions">Promotions</button>
           <button class="tab-button" type="button" data-view="settings" data-modes="back-office" title="Settings">Settings</button>
         </nav>
 
@@ -232,6 +233,8 @@
             <input id="itemNameInput" type="text" placeholder="Item name" required />
             <input id="itemCategoryInput" type="text" placeholder="Category" required />
             <input id="itemPriceInput" type="number" min="0" step="0.01" placeholder="Price" required />
+            <input id="itemCostInput" type="number" min="0" step="0.01" placeholder="Cost" />
+            <input id="itemStockInput" type="number" min="0" step="1" placeholder="Stock" />
             <input id="itemBarcodeInput" type="text" placeholder="Barcode / SKU" />
             <label class="toggle-line compact">
               <input id="itemTenderInput" type="checkbox" />
@@ -241,6 +244,28 @@
           </form>
           <p class="backoffice-note">Scan or type a barcode/SKU while adding an item. At the register, scan that same code and the product is added to the cart.</p>
           <div class="item-list" id="itemList"></div>
+        </section>
+
+        <section class="view" id="promotionsView">
+          <header class="workspace-header">
+            <div>
+              <p class="eyebrow">Back office</p>
+              <h2>Promotions</h2>
+            </div>
+          </header>
+          <form class="item-form promo-form" id="promotionForm">
+            <input id="promoNameInput" type="text" placeholder="Promotion name" required />
+            <select id="promoItemSelect" required></select>
+            <input id="promoBuyQtyInput" type="number" min="1" step="1" placeholder="Buy qty" required />
+            <input id="promoDiscountInput" type="number" min="0" step="0.01" placeholder="Discount $" required />
+            <label class="toggle-line compact">
+              <input id="promoActiveInput" type="checkbox" checked />
+              <span>Active</span>
+            </label>
+            <button class="primary-button" type="submit">Add promo</button>
+          </form>
+          <p class="backoffice-note">Example: select an item, set Buy qty to 2, Discount to 2.00, and the register will take $2 off each matching group.</p>
+          <div class="item-list" id="promotionList"></div>
         </section>
 
         <section class="view" id="settingsView">
@@ -274,8 +299,13 @@
               <span>Address optional</span>
               <input id="newStoreAddressInput" type="text" placeholder="Store address" />
             </label>
+            <label>
+              <span>Store register PIN</span>
+              <input id="newStorePinInput" type="password" inputmode="numeric" placeholder="PIN for this store" />
+            </label>
             <button class="primary-button" type="submit">Create store</button>
           </form>
+          <div class="item-list" id="storeList"></div>
           <form class="settings-form" id="registerForm">
             <label>
               <span>Register name</span>

@@ -25,11 +25,12 @@ const types = {
 const defaultDb = {
   menuVersion: "thomaston-raceway-2026-06-27",
   stores: [
-    { id: "thomaston-raceway", name: "Thomaston Raceway", address: "" }
+    { id: "thomaston-raceway", name: "Thomaston Raceway", address: "", pin: "1234" }
   ],
   registers: [
     { id: "main-register", name: "Main Register", storeId: "thomaston-raceway" }
   ],
+  promotions: [],
   settings: {
     storeName: "Thomaston Raceway",
     taxRate: 8.25,
@@ -155,13 +156,20 @@ function ensureDataFile() {
 }
 
 function withBarcodes(db) {
+  const stores = (Array.isArray(db.stores) && db.stores.length ? db.stores : defaultDb.stores).map((store) => ({
+    ...store,
+    pin: String(store.pin || registerPin)
+  }));
   return {
     ...db,
-    stores: Array.isArray(db.stores) && db.stores.length ? db.stores : defaultDb.stores,
+    stores,
     registers: Array.isArray(db.registers) && db.registers.length ? db.registers : defaultDb.registers,
+    promotions: Array.isArray(db.promotions) ? db.promotions : [],
     items: (db.items || []).map((item) => ({
       ...item,
       storeId: item.storeId || "thomaston-raceway",
+      stock: Number(item.stock) || 0,
+      cost: Number(item.cost) || 0,
       barcode: item.barcode || item.sku || item.id
     }))
   };
@@ -180,6 +188,7 @@ function readDb() {
       settings: migratedSettings,
       stores: Array.isArray(saved.stores) && saved.stores.length ? saved.stores : defaultDb.stores,
       registers: Array.isArray(saved.registers) && saved.registers.length ? saved.registers : defaultDb.registers,
+      promotions: Array.isArray(saved.promotions) ? saved.promotions : [],
       nextOrderNumber: Number(saved.nextOrderNumber) || defaultDb.nextOrderNumber,
       orders: Array.isArray(saved.orders) ? saved.orders : []
     };
@@ -202,7 +211,9 @@ async function handleApi(req, res, url) {
   if (req.method === "POST" && url.pathname === "/api/login") {
     const body = await readBody(req);
     const role = body.mode === "back-office" ? "back-office" : "register";
-    const expectedPin = role === "back-office" ? backOfficePin : registerPin;
+    const db = readDb();
+    const requestedStore = db.stores.find((store) => store.id === body.storeId);
+    const expectedPin = role === "back-office" ? backOfficePin : String(requestedStore?.pin || registerPin);
     if (String(body.pin || "") !== expectedPin) {
       sendJson(res, 401, { ok: false, message: "Wrong PIN" });
       return;
@@ -243,6 +254,7 @@ async function handleApi(req, res, url) {
       menuVersion: body.menuVersion || defaultDb.menuVersion,
       stores: Array.isArray(body.stores) && body.stores.length ? body.stores : defaultDb.stores,
       registers: Array.isArray(body.registers) && body.registers.length ? body.registers : defaultDb.registers,
+      promotions: Array.isArray(body.promotions) ? body.promotions : [],
       settings: body.settings || defaultDb.settings,
       nextOrderNumber: Number(body.nextOrderNumber) || 1001,
       items: Array.isArray(body.items) ? body.items : [],

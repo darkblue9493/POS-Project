@@ -26,7 +26,14 @@ Live paths:
 - `/register.html` for the register
 - `/back-office.html` for the back office
 
-The back office can create multiple stores and any number of registers. Each register is assigned to a store and gets its own link, such as `/register.html?register=atlanta-front-register`. Each item belongs to the selected store, and the register only shows/scans products for its assigned store.
+The back office can create multiple stores and any number of registers. Each store gets its own register link, such as `/register.html?store=atlanta`, and its own register PIN. Each item belongs to the selected store, and the register only shows/scans products for that store.
+
+Back-office actions:
+
+- Create a store with its own PIN
+- Open/copy the store register link
+- Change a store PIN by entering the current PIN first
+- Delete a store by entering that store's PIN
 
 Included:
 
@@ -44,6 +51,8 @@ Included:
 - CSV export
 - Menu item management
 - Back-office item setup with barcode/SKU entry
+- Back-office inventory counts and item cost entry
+- Back-office promotions such as buy 2, get $2 off
 - Back-office store and register setup
 - PIN screen when hosted online
 - Shared menu/orders when hosted online with server storage

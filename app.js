@@ -6,11 +6,12 @@
   const defaultState = {
     menuVersion: "thomaston-raceway-2026-06-27",
     stores: [
-      { id: "thomaston-raceway", name: "Thomaston Raceway", address: "" },
+      { id: "thomaston-raceway", name: "Thomaston Raceway", address: "", pin: "1234" },
     ],
     registers: [
       { id: "main-register", name: "Main Register", storeId: "thomaston-raceway" },
     ],
+    promotions: [],
     settings: {
       storeName: "Thomaston Raceway",
       taxRate: 8.25,
@@ -121,6 +122,8 @@
     itemNameInput: document.getElementById("itemNameInput"),
     itemCategoryInput: document.getElementById("itemCategoryInput"),
     itemPriceInput: document.getElementById("itemPriceInput"),
+    itemCostInput: document.getElementById("itemCostInput"),
+    itemStockInput: document.getElementById("itemStockInput"),
     itemBarcodeInput: document.getElementById("itemBarcodeInput"),
     itemTenderInput: document.getElementById("itemTenderInput"),
     itemList: document.getElementById("itemList"),
@@ -128,6 +131,8 @@
     storeForm: document.getElementById("storeForm"),
     newStoreNameInput: document.getElementById("newStoreNameInput"),
     newStoreAddressInput: document.getElementById("newStoreAddressInput"),
+    newStorePinInput: document.getElementById("newStorePinInput"),
+    storeList: document.getElementById("storeList"),
     registerForm: document.getElementById("registerForm"),
     newRegisterNameInput: document.getElementById("newRegisterNameInput"),
     newRegisterStoreSelect: document.getElementById("newRegisterStoreSelect"),
@@ -139,6 +144,13 @@
     receiptContent: document.getElementById("receiptContent"),
     printReceiptButton: document.getElementById("printReceiptButton"),
     closeReceiptButton: document.getElementById("closeReceiptButton"),
+    promotionForm: document.getElementById("promotionForm"),
+    promoNameInput: document.getElementById("promoNameInput"),
+    promoItemSelect: document.getElementById("promoItemSelect"),
+    promoBuyQtyInput: document.getElementById("promoBuyQtyInput"),
+    promoDiscountInput: document.getElementById("promoDiscountInput"),
+    promoActiveInput: document.getElementById("promoActiveInput"),
+    promotionList: document.getElementById("promotionList"),
   };
 
   let state = loadState();
@@ -156,8 +168,12 @@
     return new URLSearchParams(location.search).get("register") || "";
   }
 
+  function getRequestedStoreId() {
+    return new URLSearchParams(location.search).get("store") || "";
+  }
+
   function getAllowedViews() {
-    return appMode === "back-office" ? ["dashboard", "orders", "items", "settings"] : ["register", "orders"];
+    return appMode === "back-office" ? ["dashboard", "orders", "items", "promotions", "settings"] : ["register", "orders"];
   }
 
   function applyAppMode() {
@@ -179,10 +195,12 @@
       if (!saved || saved.menuVersion !== defaultState.menuVersion) return structuredClone(defaultState);
       const merged = saved ? { ...defaultState, ...saved, settings: { ...defaultState.settings, ...saved.settings } } : structuredClone(defaultState);
       merged.stores = Array.isArray(merged.stores) && merged.stores.length ? merged.stores : defaultState.stores;
+      merged.stores = merged.stores.map((store) => ({ ...store, pin: String(store.pin || "1234") }));
       merged.registers = Array.isArray(merged.registers) && merged.registers.length ? merged.registers : defaultState.registers;
+      merged.promotions = Array.isArray(merged.promotions) ? merged.promotions : [];
       merged.selectedStoreId = merged.selectedStoreId || merged.stores[0].id;
       merged.selectedRegisterId = merged.selectedRegisterId || merged.registers[0].id;
-      merged.items = merged.items.map((item) => ({ ...item, storeId: item.storeId || merged.stores[0].id, barcode: item.barcode || item.sku || item.id }));
+      merged.items = merged.items.map((item) => ({ ...item, storeId: item.storeId || merged.stores[0].id, stock: Number(item.stock) || 0, cost: Number(item.cost) || 0, barcode: item.barcode || item.sku || item.id }));
       return merged;
     } catch (error) {
       return structuredClone(defaultState);
@@ -217,6 +235,7 @@
         ...state,
         ...data.state,
         activeCategory: "All",
+        selectedStoreId: getRequestedStoreId() || state.selectedStoreId,
         orderType: state.orderType,
         payment: state.payment,
         cart: [],
@@ -241,6 +260,7 @@
           menuVersion: state.menuVersion,
           stores: state.stores,
           registers: state.registers,
+          promotions: state.promotions,
           nextOrderNumber: state.nextOrderNumber,
           items: state.items,
           orders: state.orders,
@@ -265,7 +285,7 @@
 
   function getCartTotals() {
     const subtotal = state.cart.reduce((sum, line) => sum + line.price * line.qty, 0);
-    const discount = elements.bogoToggle.checked ? getBogoDiscount() : 0;
+    const discount = (elements.bogoToggle.checked ? getBogoDiscount() : 0) + getPromotionDiscount();
     const taxable = Math.max(0, subtotal - discount);
     const tax = taxable * ((Number(state.settings.taxRate) || 0) / 100);
     return { subtotal, discount, tax, total: taxable + tax };
@@ -280,6 +300,17 @@
     tenderUnits.sort((a, b) => a - b);
     const freeCount = Math.floor(tenderUnits.length / 2);
     return tenderUnits.slice(0, freeCount).reduce((sum, amount) => sum + amount, 0);
+  }
+
+  function getPromotionDiscount() {
+    return state.promotions
+      .filter((promo) => promo.storeId === state.selectedStoreId && promo.active)
+      .reduce((sum, promo) => {
+        const line = state.cart.find((cartLine) => cartLine.id === promo.itemId);
+        if (!line) return sum;
+        const groupCount = Math.floor(line.qty / Math.max(1, Number(promo.buyQty) || 1));
+        return sum + groupCount * (Number(promo.discountAmount) || 0);
+      }, 0);
   }
 
   function setView(viewName) {
@@ -300,11 +331,13 @@
     elements.settingsReceiptFooter.value = state.settings.receiptFooter;
     renderCategories();
     renderStoreSelect();
+    renderStoreList();
     renderRegisterControls();
     renderMenu();
     renderCart();
     renderOrders();
     renderItems();
+    renderPromotions();
     renderDashboard();
     saveState();
   }
@@ -316,8 +349,16 @@
     if (!Array.isArray(state.registers) || !state.registers.length) {
       state.registers = structuredClone(defaultState.registers);
     }
+    if (!Array.isArray(state.promotions)) {
+      state.promotions = [];
+    }
     if (!state.selectedStoreId || !state.stores.some((store) => store.id === state.selectedStoreId)) {
       state.selectedStoreId = state.stores[0].id;
+    }
+    const requestedStoreId = getRequestedStoreId();
+    const requestedStore = state.stores.find((store) => store.id === requestedStoreId);
+    if (requestedStore && appMode === "register") {
+      state.selectedStoreId = requestedStore.id;
     }
     const requestedRegisterId = getRequestedRegisterId();
     const requestedRegister = state.registers.find((register) => register.id === requestedRegisterId);
@@ -328,7 +369,7 @@
     if (!state.selectedRegisterId || !state.registers.some((register) => register.id === state.selectedRegisterId)) {
       state.selectedRegisterId = state.registers[0].id;
     }
-    state.items = state.items.map((item) => ({ ...item, storeId: item.storeId || state.stores[0].id }));
+    state.items = state.items.map((item) => ({ ...item, storeId: item.storeId || state.stores[0].id, stock: Number(item.stock) || 0, cost: Number(item.cost) || 0 }));
   }
 
   function getSelectedStore() {
@@ -350,6 +391,68 @@
       option.selected = store.id === state.selectedStoreId;
       elements.storeSelect.appendChild(option);
     });
+  }
+
+  function getStoreRegisterLink(store) {
+    return `register.html?store=${encodeURIComponent(store.id)}`;
+  }
+
+  function renderStoreList() {
+    if (!elements.storeList) return;
+    elements.storeList.innerHTML = "";
+    state.stores.forEach((store) => {
+      const row = document.createElement("div");
+      row.className = "item-list-row store-list-row";
+      row.innerHTML = `
+        <div>
+          <strong>${escapeHtml(store.name)}</strong>
+          <div class="line-meta">${escapeHtml(store.address || "No address")} / ${escapeHtml(getStoreRegisterLink(store))}</div>
+        </div>
+        <a class="secondary-button link-button" href="${getStoreRegisterLink(store)}">Open</a>
+        <button class="secondary-button" type="button" data-action="pin">Change PIN</button>
+        <button class="secondary-button danger-button" type="button" data-action="delete">Delete</button>
+      `;
+      row.querySelector('[data-action="pin"]').addEventListener("click", () => changeStorePin(store.id));
+      row.querySelector('[data-action="delete"]').addEventListener("click", () => deleteStore(store.id));
+      elements.storeList.appendChild(row);
+    });
+  }
+
+  function changeStorePin(storeId) {
+    const store = state.stores.find((candidate) => candidate.id === storeId);
+    if (!store) return;
+    const currentPin = window.prompt(`Enter current PIN for ${store.name}`);
+    if (currentPin !== String(store.pin || "")) {
+      window.alert("PIN did not match.");
+      return;
+    }
+    const newPin = window.prompt("Enter new store PIN");
+    if (!newPin) return;
+    store.pin = String(newPin);
+    render();
+  }
+
+  function deleteStore(storeId) {
+    const store = state.stores.find((candidate) => candidate.id === storeId);
+    if (!store) return;
+    if (state.stores.length <= 1) {
+      window.alert("Create another store before deleting this one.");
+      return;
+    }
+    const currentPin = window.prompt(`Enter PIN to delete ${store.name}`);
+    if (currentPin !== String(store.pin || "")) {
+      window.alert("PIN did not match.");
+      return;
+    }
+    state.stores = state.stores.filter((candidate) => candidate.id !== storeId);
+    state.items = state.items.filter((item) => item.storeId !== storeId);
+    state.registers = state.registers.filter((register) => register.storeId !== storeId);
+    state.orders = state.orders.filter((order) => order.storeId !== storeId);
+    if (state.selectedStoreId === storeId) {
+      state.selectedStoreId = state.stores[0].id;
+      state.cart = [];
+    }
+    render();
   }
 
   function renderRegisterControls() {
@@ -578,6 +681,10 @@
     };
     state.orders.unshift(order);
     state.nextOrderNumber += 1;
+    state.cart.forEach((line) => {
+      const item = state.items.find((candidate) => candidate.id === line.id && candidate.storeId === state.selectedStoreId);
+      if (item) item.stock = Math.max(0, (Number(item.stock) || 0) - line.qty);
+    });
     state.cart = [];
     elements.customerName.value = "";
     elements.ticketNote.value = "";
@@ -643,7 +750,7 @@
       row.innerHTML = `
         <div>
           <strong>${escapeHtml(item.name)}</strong>
-          <div class="line-meta">${escapeHtml(item.category)}${item.tender ? " / Tender promo item" : ""}</div>
+          <div class="line-meta">${escapeHtml(item.category)} / Stock ${Number(item.stock) || 0} / Cost ${price(item.cost || 0)}${item.tender ? " / Tender promo item" : ""}</div>
         </div>
         <span>${escapeHtml(item.barcode || "No barcode")}</span>
         <strong>${price(item.price)}</strong>
@@ -655,6 +762,52 @@
         render();
       });
       elements.itemList.appendChild(row);
+    });
+  }
+
+  function renderPromotions() {
+    if (!elements.promoItemSelect || !elements.promotionList) return;
+    const storeItems = state.items.filter((item) => item.storeId === state.selectedStoreId);
+    elements.promoItemSelect.innerHTML = "";
+    storeItems.forEach((item) => {
+      const option = document.createElement("option");
+      option.value = item.id;
+      option.textContent = `${item.name} - ${price(item.price)}`;
+      elements.promoItemSelect.appendChild(option);
+    });
+
+    elements.promotionList.innerHTML = "";
+    const promos = state.promotions.filter((promo) => promo.storeId === state.selectedStoreId);
+    if (!promos.length) {
+      const empty = document.createElement("div");
+      empty.className = "empty-state";
+      empty.textContent = "No promotions for this store";
+      elements.promotionList.appendChild(empty);
+      return;
+    }
+
+    promos.forEach((promo) => {
+      const item = state.items.find((candidate) => candidate.id === promo.itemId);
+      const row = document.createElement("div");
+      row.className = "item-list-row";
+      row.innerHTML = `
+        <div>
+          <strong>${escapeHtml(promo.name)}</strong>
+          <div class="line-meta">${escapeHtml(item ? item.name : "Missing item")} / Buy ${promo.buyQty}, get ${price(promo.discountAmount)} off</div>
+        </div>
+        <span>${promo.active ? "Active" : "Off"}</span>
+        <button class="secondary-button" type="button" data-action="toggle">${promo.active ? "Turn off" : "Turn on"}</button>
+        <button class="secondary-button danger-button" type="button" data-action="delete">Delete</button>
+      `;
+      row.querySelector('[data-action="toggle"]').addEventListener("click", () => {
+        promo.active = !promo.active;
+        render();
+      });
+      row.querySelector('[data-action="delete"]').addEventListener("click", () => {
+        state.promotions = state.promotions.filter((candidate) => candidate.id !== promo.id);
+        render();
+      });
+      elements.promotionList.appendChild(row);
     });
   }
 
@@ -751,7 +904,7 @@
     try {
       await api("/api/login", {
         method: "POST",
-        body: JSON.stringify({ pin: elements.pinInput.value, mode: appMode }),
+        body: JSON.stringify({ pin: elements.pinInput.value, mode: appMode, storeId: getRequestedStoreId() }),
       });
       elements.pinInput.value = "";
       await loadRemoteState();
@@ -767,11 +920,30 @@
       name: elements.itemNameInput.value.trim(),
       category: elements.itemCategoryInput.value.trim(),
       price: Number(elements.itemPriceInput.value),
+      cost: Number(elements.itemCostInput.value) || 0,
+      stock: Number(elements.itemStockInput.value) || 0,
       storeId: state.selectedStoreId,
       barcode: elements.itemBarcodeInput.value.trim(),
       tender: elements.itemTenderInput.checked,
     });
     elements.itemForm.reset();
+    render();
+  });
+
+  elements.promotionForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+    if (!elements.promoItemSelect.value) return;
+    state.promotions.push({
+      id: uid("promo"),
+      storeId: state.selectedStoreId,
+      name: elements.promoNameInput.value.trim(),
+      itemId: elements.promoItemSelect.value,
+      buyQty: Number(elements.promoBuyQtyInput.value) || 1,
+      discountAmount: Number(elements.promoDiscountInput.value) || 0,
+      active: elements.promoActiveInput.checked,
+    });
+    elements.promotionForm.reset();
+    elements.promoActiveInput.checked = true;
     render();
   });
 
@@ -789,7 +961,7 @@
     if (!name) return;
     const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || uid("store");
     const id = state.stores.some((store) => store.id === slug) ? `${slug}-${Date.now().toString(36)}` : slug;
-    state.stores.push({ id, name, address: elements.newStoreAddressInput.value.trim() });
+    state.stores.push({ id, name, address: elements.newStoreAddressInput.value.trim(), pin: String(elements.newStorePinInput.value.trim() || "1234") });
     state.selectedStoreId = id;
     state.activeCategory = "All";
     state.cart = [];
