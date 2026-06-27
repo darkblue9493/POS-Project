@@ -33,20 +33,89 @@
         </div>
 
         <nav class="nav-tabs" aria-label="POS views">
-          <button class="tab-button active" type="button" data-view="register" title="Register">Register</button>
-          <button class="tab-button" type="button" data-view="orders" title="Orders">Orders</button>
-          <button class="tab-button" type="button" data-view="items" title="Items">Items</button>
-          <button class="tab-button" type="button" data-view="settings" title="Settings">Settings</button>
+          <button class="tab-button active" type="button" data-view="dashboard" data-modes="back-office" title="Dashboard">Dashboard</button>
+          <button class="tab-button" type="button" data-view="register" data-modes="register" title="Register">Register</button>
+          <button class="tab-button" type="button" data-view="orders" data-modes="register back-office" title="Orders">Orders</button>
+          <button class="tab-button" type="button" data-view="items" data-modes="back-office" title="Back Office">Back Office</button>
+          <button class="tab-button" type="button" data-view="settings" data-modes="back-office" title="Settings">Settings</button>
         </nav>
+
+        <div class="mode-links">
+          <a href="./register.html">Register</a>
+          <a href="./back-office.html">Back Office</a>
+        </div>
 
         <div class="status-panel">
           <span class="status-dot"></span>
           <span id="modeLabel">Local mode</span>
         </div>
+
+        <label class="store-picker">
+          <span>Store</span>
+          <select id="storeSelect"></select>
+        </label>
       </aside>
 
       <main class="workspace">
-        <section class="view active" id="registerView">
+        <section class="view active" id="dashboardView">
+          <header class="workspace-header">
+            <div>
+              <p class="eyebrow">Today</p>
+              <h2>Dashboard</h2>
+            </div>
+            <button class="primary-button" type="button" data-jump-register>New sale</button>
+          </header>
+
+          <div class="dashboard-grid">
+            <article class="metric-tile">
+              <span>Sales</span>
+              <strong id="todaySales">$0.00</strong>
+            </article>
+            <article class="metric-tile">
+              <span>Orders</span>
+              <strong id="todayOrders">0</strong>
+            </article>
+            <article class="metric-tile">
+              <span>Average ticket</span>
+              <strong id="averageTicket">$0.00</strong>
+            </article>
+            <article class="metric-tile">
+              <span>Cash / Card / Online</span>
+              <strong id="paymentMix">0 / 0 / 0</strong>
+            </article>
+          </div>
+
+          <div class="dashboard-layout">
+            <section class="panel-section">
+              <div class="section-head">
+                <h3>Quick Actions</h3>
+              </div>
+              <div class="quick-actions">
+                <button class="action-button" type="button" data-jump-register>
+                  <strong>Start Order</strong>
+                  <span>Open the register</span>
+                </button>
+                <button class="action-button" type="button" data-jump-items>
+                  <strong>Add Menu Item</strong>
+                  <span>Update item library</span>
+                </button>
+                <button class="action-button" type="button" data-jump-orders>
+                  <strong>Review Orders</strong>
+                  <span>Open today history</span>
+                </button>
+              </div>
+            </section>
+
+            <section class="panel-section">
+              <div class="section-head">
+                <h3>Recent Orders</h3>
+              </div>
+              <div class="recent-orders" id="recentOrders"></div>
+            </section>
+          </div>
+        </section>
+
+        <section class="view" id="registerView">
           <header class="workspace-header">
             <div>
               <p class="eyebrow">New sale</p>
@@ -68,6 +137,10 @@
                   <span>Search</span>
                   <input id="itemSearch" type="search" placeholder="Find item" autocomplete="off" />
                 </label>
+                <label class="search-field">
+                  <span>Scan</span>
+                  <input id="barcodeScanInput" type="search" placeholder="Scan barcode" autocomplete="off" />
+                </label>
                 <div class="category-strip" id="categoryStrip"></div>
               </div>
               <div class="menu-grid" id="menuGrid"></div>
@@ -84,6 +157,15 @@
 
               <div class="customer-row">
                 <input id="customerName" type="text" placeholder="Customer name" />
+              </div>
+              <div class="customer-row split">
+                <input id="ticketNote" type="text" placeholder="Order note" />
+                <select id="orderSource">
+                  <option value="In Store">In Store</option>
+                  <option value="Phone">Phone</option>
+                  <option value="DoorDash Manual">DoorDash Manual</option>
+                  <option value="Online">Online</option>
+                </select>
               </div>
 
               <div class="cart-items" id="cartItems"></div>
@@ -129,6 +211,7 @@
                   <th>Customer</th>
                   <th>Type</th>
                   <th>Payment</th>
+                  <th>Source</th>
                   <th>Total</th>
                   <th>Time</th>
                 </tr>
@@ -141,20 +224,22 @@
         <section class="view" id="itemsView">
           <header class="workspace-header">
             <div>
-              <p class="eyebrow">Menu</p>
-              <h2>Items</h2>
+              <p class="eyebrow">Back office</p>
+              <h2>Item Library</h2>
             </div>
           </header>
           <form class="item-form" id="itemForm">
             <input id="itemNameInput" type="text" placeholder="Item name" required />
             <input id="itemCategoryInput" type="text" placeholder="Category" required />
             <input id="itemPriceInput" type="number" min="0" step="0.01" placeholder="Price" required />
+            <input id="itemBarcodeInput" type="text" placeholder="Barcode / SKU" />
             <label class="toggle-line compact">
               <input id="itemTenderInput" type="checkbox" />
               <span>Tender item</span>
             </label>
             <button class="primary-button" type="submit">Add item</button>
           </form>
+          <p class="backoffice-note">Scan or type a barcode/SKU while adding an item. At the register, scan that same code and the product is added to the cart.</p>
           <div class="item-list" id="itemList"></div>
         </section>
 
@@ -180,6 +265,29 @@
             </label>
             <button class="primary-button" type="submit">Save settings</button>
           </form>
+          <form class="settings-form" id="storeForm">
+            <label>
+              <span>New store name</span>
+              <input id="newStoreNameInput" type="text" placeholder="Store name" />
+            </label>
+            <label>
+              <span>Address optional</span>
+              <input id="newStoreAddressInput" type="text" placeholder="Store address" />
+            </label>
+            <button class="primary-button" type="submit">Create store</button>
+          </form>
+          <form class="settings-form" id="registerForm">
+            <label>
+              <span>Register name</span>
+              <input id="newRegisterNameInput" type="text" placeholder="Atlanta Front Register" />
+            </label>
+            <label>
+              <span>Store</span>
+              <select id="newRegisterStoreSelect"></select>
+            </label>
+            <button class="primary-button" type="submit">Create register</button>
+          </form>
+          <div class="item-list" id="registerList"></div>
         </section>
       </main>
     </div>

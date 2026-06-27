@@ -9,6 +9,8 @@ let dataDir = process.env.DATA_DIR || path.join(root, "data");
 let dbPath = path.join(dataDir, "pos-db.json");
 const port = Number(process.env.PORT || 4188);
 const posPin = String(process.env.POS_PIN || "1234");
+const registerPin = String(process.env.REGISTER_PIN || posPin);
+const backOfficePin = String(process.env.BACK_OFFICE_PIN || posPin);
 const sessions = new Map();
 const sessionMaxAgeMs = 1000 * 60 * 60 * 16;
 const types = {
@@ -22,6 +24,12 @@ const types = {
 
 const defaultDb = {
   menuVersion: "thomaston-raceway-2026-06-27",
+  stores: [
+    { id: "thomaston-raceway", name: "Thomaston Raceway", address: "" }
+  ],
+  registers: [
+    { id: "main-register", name: "Main Register", storeId: "thomaston-raceway" }
+  ],
   settings: {
     storeName: "Thomaston Raceway",
     taxRate: 8.25,
@@ -142,8 +150,21 @@ function ensureDataFile() {
     fs.mkdirSync(dataDir, { recursive: true });
   }
   if (!fs.existsSync(dbPath)) {
-    fs.writeFileSync(dbPath, JSON.stringify(defaultDb, null, 2));
+    fs.writeFileSync(dbPath, JSON.stringify(withBarcodes(defaultDb), null, 2));
   }
+}
+
+function withBarcodes(db) {
+  return {
+    ...db,
+    stores: Array.isArray(db.stores) && db.stores.length ? db.stores : defaultDb.stores,
+    registers: Array.isArray(db.registers) && db.registers.length ? db.registers : defaultDb.registers,
+    items: (db.items || []).map((item) => ({
+      ...item,
+      storeId: item.storeId || "thomaston-raceway",
+      barcode: item.barcode || item.sku || item.id
+    }))
+  };
 }
 
 function readDb() {
@@ -155,19 +176,21 @@ function readDb() {
       migratedSettings.storeName = defaultDb.settings.storeName;
     }
     return {
-      ...defaultDb,
+      ...withBarcodes(defaultDb),
       settings: migratedSettings,
+      stores: Array.isArray(saved.stores) && saved.stores.length ? saved.stores : defaultDb.stores,
+      registers: Array.isArray(saved.registers) && saved.registers.length ? saved.registers : defaultDb.registers,
       nextOrderNumber: Number(saved.nextOrderNumber) || defaultDb.nextOrderNumber,
       orders: Array.isArray(saved.orders) ? saved.orders : []
     };
   }
-  return {
+  return withBarcodes({
     ...defaultDb,
     ...saved,
     settings: { ...defaultDb.settings, ...saved.settings },
-    items: Array.isArray(saved.items) ? saved.items : defaultDb.items,
+    items: (Array.isArray(saved.items) ? saved.items : defaultDb.items).map((item) => ({ ...item, barcode: item.barcode || item.sku || item.id })),
     orders: Array.isArray(saved.orders) ? saved.orders : []
-  };
+  });
 }
 
 function writeDb(db) {
@@ -178,12 +201,14 @@ function writeDb(db) {
 async function handleApi(req, res, url) {
   if (req.method === "POST" && url.pathname === "/api/login") {
     const body = await readBody(req);
-    if (String(body.pin || "") !== posPin) {
+    const role = body.mode === "back-office" ? "back-office" : "register";
+    const expectedPin = role === "back-office" ? backOfficePin : registerPin;
+    if (String(body.pin || "") !== expectedPin) {
       sendJson(res, 401, { ok: false, message: "Wrong PIN" });
       return;
     }
     const token = crypto.randomBytes(24).toString("hex");
-    sessions.set(token, { createdAt: Date.now() });
+    sessions.set(token, { createdAt: Date.now(), role });
     res.writeHead(200, {
       "content-type": "application/json; charset=utf-8",
       "set-cookie": `pos_session=${encodeURIComponent(token)}; HttpOnly; SameSite=Lax; Path=/; Max-Age=${Math.floor(sessionMaxAgeMs / 1000)}`
@@ -216,6 +241,8 @@ async function handleApi(req, res, url) {
     const body = await readBody(req);
     writeDb({
       menuVersion: body.menuVersion || defaultDb.menuVersion,
+      stores: Array.isArray(body.stores) && body.stores.length ? body.stores : defaultDb.stores,
+      registers: Array.isArray(body.registers) && body.registers.length ? body.registers : defaultDb.registers,
       settings: body.settings || defaultDb.settings,
       nextOrderNumber: Number(body.nextOrderNumber) || 1001,
       items: Array.isArray(body.items) ? body.items : [],

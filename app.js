@@ -5,6 +5,12 @@
 
   const defaultState = {
     menuVersion: "thomaston-raceway-2026-06-27",
+    stores: [
+      { id: "thomaston-raceway", name: "Thomaston Raceway", address: "" },
+    ],
+    registers: [
+      { id: "main-register", name: "Main Register", storeId: "thomaston-raceway" },
+    ],
     settings: {
       storeName: "Thomaston Raceway",
       taxRate: 8.25,
@@ -12,6 +18,8 @@
     },
     nextOrderNumber: 1001,
     activeCategory: "All",
+    selectedStoreId: "thomaston-raceway",
+    selectedRegisterId: "main-register",
     orderType: "dine-in",
     payment: "Cash",
     cart: [],
@@ -77,6 +85,12 @@
   const elements = {
     storeName: document.getElementById("storeName"),
     modeLabel: document.getElementById("modeLabel"),
+    storeSelect: document.getElementById("storeSelect"),
+    todaySales: document.getElementById("todaySales"),
+    todayOrders: document.getElementById("todayOrders"),
+    averageTicket: document.getElementById("averageTicket"),
+    paymentMix: document.getElementById("paymentMix"),
+    recentOrders: document.getElementById("recentOrders"),
     loginScreen: document.getElementById("loginScreen"),
     loginForm: document.getElementById("loginForm"),
     pinInput: document.getElementById("pinInput"),
@@ -88,8 +102,11 @@
     categoryStrip: document.getElementById("categoryStrip"),
     menuGrid: document.getElementById("menuGrid"),
     itemSearch: document.getElementById("itemSearch"),
+    barcodeScanInput: document.getElementById("barcodeScanInput"),
     ticketNumber: document.getElementById("ticketNumber"),
     customerName: document.getElementById("customerName"),
+    ticketNote: document.getElementById("ticketNote"),
+    orderSource: document.getElementById("orderSource"),
     cartItems: document.getElementById("cartItems"),
     bogoToggle: document.getElementById("bogoToggle"),
     subtotal: document.getElementById("subtotal"),
@@ -104,9 +121,17 @@
     itemNameInput: document.getElementById("itemNameInput"),
     itemCategoryInput: document.getElementById("itemCategoryInput"),
     itemPriceInput: document.getElementById("itemPriceInput"),
+    itemBarcodeInput: document.getElementById("itemBarcodeInput"),
     itemTenderInput: document.getElementById("itemTenderInput"),
     itemList: document.getElementById("itemList"),
     settingsForm: document.getElementById("settingsForm"),
+    storeForm: document.getElementById("storeForm"),
+    newStoreNameInput: document.getElementById("newStoreNameInput"),
+    newStoreAddressInput: document.getElementById("newStoreAddressInput"),
+    registerForm: document.getElementById("registerForm"),
+    newRegisterNameInput: document.getElementById("newRegisterNameInput"),
+    newRegisterStoreSelect: document.getElementById("newRegisterStoreSelect"),
+    registerList: document.getElementById("registerList"),
     settingsStoreName: document.getElementById("settingsStoreName"),
     settingsTaxRate: document.getElementById("settingsTaxRate"),
     settingsReceiptFooter: document.getElementById("settingsReceiptFooter"),
@@ -119,6 +144,29 @@
   let state = loadState();
   let hydrated = !remoteMode;
   let saveTimer = null;
+  const appMode = getAppMode();
+
+  function getAppMode() {
+    const mode = new URLSearchParams(location.search).get("mode");
+    if (mode === "back-office" || location.pathname.includes("back-office")) return "back-office";
+    return "register";
+  }
+
+  function getRequestedRegisterId() {
+    return new URLSearchParams(location.search).get("register") || "";
+  }
+
+  function getAllowedViews() {
+    return appMode === "back-office" ? ["dashboard", "orders", "items", "settings"] : ["register", "orders"];
+  }
+
+  function applyAppMode() {
+    document.body.dataset.appMode = appMode;
+    elements.tabs.forEach((tab) => {
+      const modes = String(tab.dataset.modes || "").split(/\s+/);
+      tab.hidden = !modes.includes(appMode);
+    });
+  }
 
   function setLoginVisible(visible) {
     elements.loginScreen.hidden = !visible;
@@ -129,7 +177,13 @@
     try {
       const saved = JSON.parse(localStorage.getItem(storageKey));
       if (!saved || saved.menuVersion !== defaultState.menuVersion) return structuredClone(defaultState);
-      return saved ? { ...defaultState, ...saved, settings: { ...defaultState.settings, ...saved.settings } } : structuredClone(defaultState);
+      const merged = saved ? { ...defaultState, ...saved, settings: { ...defaultState.settings, ...saved.settings } } : structuredClone(defaultState);
+      merged.stores = Array.isArray(merged.stores) && merged.stores.length ? merged.stores : defaultState.stores;
+      merged.registers = Array.isArray(merged.registers) && merged.registers.length ? merged.registers : defaultState.registers;
+      merged.selectedStoreId = merged.selectedStoreId || merged.stores[0].id;
+      merged.selectedRegisterId = merged.selectedRegisterId || merged.registers[0].id;
+      merged.items = merged.items.map((item) => ({ ...item, storeId: item.storeId || merged.stores[0].id, barcode: item.barcode || item.sku || item.id }));
+      return merged;
     } catch (error) {
       return structuredClone(defaultState);
     }
@@ -170,6 +224,7 @@
       hydrated = true;
       setLoginVisible(false);
       render();
+      setView(getAllowedViews()[0]);
     } catch (error) {
       setLoginVisible(true);
       elements.loginMessage.textContent = error.message === "Login required" ? "" : error.message;
@@ -184,6 +239,8 @@
         body: JSON.stringify({
           settings: state.settings,
           menuVersion: state.menuVersion,
+          stores: state.stores,
+          registers: state.registers,
           nextOrderNumber: state.nextOrderNumber,
           items: state.items,
           orders: state.orders,
@@ -203,7 +260,7 @@
   }
 
   function getCategories() {
-    return ["All", ...Array.from(new Set(state.items.map((item) => item.category)))];
+    return ["All", ...Array.from(new Set(state.items.filter((item) => item.storeId === state.selectedStoreId).map((item) => item.category)))];
   }
 
   function getCartTotals() {
@@ -226,12 +283,15 @@
   }
 
   function setView(viewName) {
-    elements.tabs.forEach((tab) => tab.classList.toggle("active", tab.dataset.view === viewName));
-    elements.views.forEach((view) => view.classList.toggle("active", view.id === `${viewName}View`));
+    const allowed = getAllowedViews();
+    const targetView = allowed.includes(viewName) ? viewName : allowed[0];
+    elements.tabs.forEach((tab) => tab.classList.toggle("active", tab.dataset.view === targetView));
+    elements.views.forEach((view) => view.classList.toggle("active", view.id === `${targetView}View`));
     render();
   }
 
   function render() {
+    ensureSelectedStore();
     elements.storeName.textContent = state.settings.storeName;
     elements.modeLabel.textContent = remoteMode ? "Shared mode" : "Local mode";
     elements.ticketNumber.textContent = `Order #${state.nextOrderNumber}`;
@@ -239,11 +299,136 @@
     elements.settingsTaxRate.value = state.settings.taxRate;
     elements.settingsReceiptFooter.value = state.settings.receiptFooter;
     renderCategories();
+    renderStoreSelect();
+    renderRegisterControls();
     renderMenu();
     renderCart();
     renderOrders();
     renderItems();
+    renderDashboard();
     saveState();
+  }
+
+  function ensureSelectedStore() {
+    if (!Array.isArray(state.stores) || !state.stores.length) {
+      state.stores = structuredClone(defaultState.stores);
+    }
+    if (!Array.isArray(state.registers) || !state.registers.length) {
+      state.registers = structuredClone(defaultState.registers);
+    }
+    if (!state.selectedStoreId || !state.stores.some((store) => store.id === state.selectedStoreId)) {
+      state.selectedStoreId = state.stores[0].id;
+    }
+    const requestedRegisterId = getRequestedRegisterId();
+    const requestedRegister = state.registers.find((register) => register.id === requestedRegisterId);
+    if (requestedRegister && appMode === "register") {
+      state.selectedRegisterId = requestedRegister.id;
+      state.selectedStoreId = requestedRegister.storeId;
+    }
+    if (!state.selectedRegisterId || !state.registers.some((register) => register.id === state.selectedRegisterId)) {
+      state.selectedRegisterId = state.registers[0].id;
+    }
+    state.items = state.items.map((item) => ({ ...item, storeId: item.storeId || state.stores[0].id }));
+  }
+
+  function getSelectedStore() {
+    ensureSelectedStore();
+    return state.stores.find((store) => store.id === state.selectedStoreId) || state.stores[0];
+  }
+
+  function getSelectedRegister() {
+    ensureSelectedStore();
+    return state.registers.find((register) => register.id === state.selectedRegisterId) || state.registers[0];
+  }
+
+  function renderStoreSelect() {
+    elements.storeSelect.innerHTML = "";
+    state.stores.forEach((store) => {
+      const option = document.createElement("option");
+      option.value = store.id;
+      option.textContent = store.name;
+      option.selected = store.id === state.selectedStoreId;
+      elements.storeSelect.appendChild(option);
+    });
+  }
+
+  function renderRegisterControls() {
+    elements.newRegisterStoreSelect.innerHTML = "";
+    state.stores.forEach((store) => {
+      const option = document.createElement("option");
+      option.value = store.id;
+      option.textContent = store.name;
+      option.selected = store.id === state.selectedStoreId;
+      elements.newRegisterStoreSelect.appendChild(option);
+    });
+
+    elements.registerList.innerHTML = "";
+    state.registers.forEach((register) => {
+      const store = state.stores.find((candidate) => candidate.id === register.storeId);
+      const url = `register.html?register=${encodeURIComponent(register.id)}`;
+      const row = document.createElement("div");
+      row.className = "item-list-row";
+      row.innerHTML = `
+        <div>
+          <strong>${escapeHtml(register.name)}</strong>
+          <div class="line-meta">${escapeHtml(store ? store.name : "No store assigned")}</div>
+        </div>
+        <span>${escapeHtml(register.id)}</span>
+        <a class="secondary-button link-button" href="${url}">Open</a>
+        <button class="secondary-button" type="button">Remove</button>
+      `;
+      row.querySelector("button").addEventListener("click", () => {
+        state.registers = state.registers.filter((candidate) => candidate.id !== register.id);
+        if (!state.registers.length) {
+          state.registers = structuredClone(defaultState.registers);
+        }
+        render();
+      });
+      elements.registerList.appendChild(row);
+    });
+  }
+
+  function getTodaysOrders() {
+    const today = new Date().toDateString();
+    return state.orders.filter((order) => new Date(order.createdAt).toDateString() === today && (order.storeId || state.selectedStoreId) === state.selectedStoreId);
+  }
+
+  function renderDashboard() {
+    const orders = getTodaysOrders();
+    const total = orders.reduce((sum, order) => sum + Number(order.totals.total || 0), 0);
+    const paymentCounts = orders.reduce(
+      (counts, order) => {
+        counts[order.payment] = (counts[order.payment] || 0) + 1;
+        return counts;
+      },
+      { Cash: 0, Card: 0, Online: 0 }
+    );
+
+    elements.todaySales.textContent = price(total);
+    elements.todayOrders.textContent = String(orders.length);
+    elements.averageTicket.textContent = price(orders.length ? total / orders.length : 0);
+    elements.paymentMix.textContent = `${paymentCounts.Cash || 0} / ${paymentCounts.Card || 0} / ${paymentCounts.Online || 0}`;
+    elements.recentOrders.innerHTML = "";
+
+    if (!state.orders.length) {
+      const empty = document.createElement("div");
+      empty.className = "empty-state";
+      empty.textContent = "No orders yet";
+      elements.recentOrders.appendChild(empty);
+      return;
+    }
+
+    state.orders.slice(0, 5).forEach((order) => {
+      const row = document.createElement("button");
+      row.className = "recent-order";
+      row.type = "button";
+      row.innerHTML = `
+        <strong>#${order.id} ${escapeHtml(order.customer)} - ${price(order.totals.total)}</strong>
+        <span>${escapeHtml(order.source || "In Store")} / ${escapeHtml(order.payment)} / ${new Date(order.createdAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</span>
+      `;
+      row.addEventListener("click", () => showReceipt(order));
+      elements.recentOrders.appendChild(row);
+    });
   }
 
   function renderCategories() {
@@ -264,6 +449,7 @@
   function renderMenu() {
     const query = elements.itemSearch.value.trim().toLowerCase();
     const filtered = state.items.filter((item) => {
+      if (item.storeId !== state.selectedStoreId) return false;
       const matchesCategory = state.activeCategory === "All" || item.category === state.activeCategory;
       const matchesSearch = !query || item.name.toLowerCase().includes(query) || item.category.toLowerCase().includes(query);
       return matchesCategory && matchesSearch;
@@ -296,6 +482,33 @@
     }
     renderCart();
     saveState();
+  }
+
+  function normalizeBarcode(value) {
+    return String(value || "").trim().toLowerCase();
+  }
+
+  function scanBarcode(value) {
+    const code = normalizeBarcode(value);
+    if (!code) return;
+    const item = state.items.find((candidate) =>
+      candidate.storeId === state.selectedStoreId &&
+      [candidate.barcode, candidate.sku, candidate.id].some((candidateCode) => normalizeBarcode(candidateCode) === code)
+    );
+    if (!item) {
+      elements.barcodeScanInput.value = "";
+      elements.barcodeScanInput.placeholder = "Not found";
+      setTimeout(() => {
+        elements.barcodeScanInput.placeholder = "Scan barcode";
+      }, 1400);
+      return;
+    }
+    addToCart(item);
+    elements.barcodeScanInput.value = "";
+    elements.barcodeScanInput.placeholder = `Added ${item.name}`;
+    setTimeout(() => {
+      elements.barcodeScanInput.placeholder = "Scan barcode";
+    }, 1400);
   }
 
   function renderCart() {
@@ -350,7 +563,13 @@
     const order = {
       id: state.nextOrderNumber,
       customer: elements.customerName.value.trim() || "Walk-in",
+      storeId: state.selectedStoreId,
+      storeName: getSelectedStore().name,
+      registerId: state.selectedRegisterId,
+      registerName: getSelectedRegister().name,
       orderType: state.orderType,
+      source: elements.orderSource.value,
+      note: elements.ticketNote.value.trim(),
       payment: state.payment,
       promo: elements.bogoToggle.checked ? "BOGO tenders" : "",
       items: state.cart.map((line) => ({ ...line })),
@@ -361,6 +580,7 @@
     state.nextOrderNumber += 1;
     state.cart = [];
     elements.customerName.value = "";
+    elements.ticketNote.value = "";
     showReceipt(order);
     render();
   }
@@ -368,7 +588,8 @@
   function showReceipt(order) {
     elements.receiptContent.innerHTML = `
       <h3>${escapeHtml(state.settings.storeName)}</h3>
-      <p>Order #${order.id}<br>${new Date(order.createdAt).toLocaleString()}<br>${escapeHtml(order.customer)}</p>
+      <p>Order #${order.id}<br>${new Date(order.createdAt).toLocaleString()}<br>${escapeHtml(order.customer)}<br>${escapeHtml(order.storeName || getSelectedStore().name)} / ${escapeHtml(order.registerName || getSelectedRegister().name)}<br>${escapeHtml(order.source || "In Store")}</p>
+      ${order.note ? `<p>Note: ${escapeHtml(order.note)}</p>` : ""}
       ${order.items
         .map(
           (item) => `
@@ -394,7 +615,7 @@
     elements.ordersTableBody.innerHTML = "";
     if (!state.orders.length) {
       const row = document.createElement("tr");
-      row.innerHTML = '<td colspan="6">No orders yet</td>';
+      row.innerHTML = '<td colspan="7">No orders yet</td>';
       elements.ordersTableBody.appendChild(row);
       return;
     }
@@ -405,6 +626,7 @@
         <td>${escapeHtml(order.customer)}</td>
         <td>${escapeHtml(order.orderType)}</td>
         <td>${escapeHtml(order.payment)}</td>
+        <td>${escapeHtml(order.source || "In Store")}</td>
         <td>${price(order.totals.total)}</td>
         <td>${new Date(order.createdAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</td>
       `;
@@ -415,7 +637,7 @@
 
   function renderItems() {
     elements.itemList.innerHTML = "";
-    state.items.forEach((item) => {
+    state.items.filter((item) => item.storeId === state.selectedStoreId).forEach((item) => {
       const row = document.createElement("div");
       row.className = "item-list-row";
       row.innerHTML = `
@@ -423,6 +645,7 @@
           <strong>${escapeHtml(item.name)}</strong>
           <div class="line-meta">${escapeHtml(item.category)}${item.tender ? " / Tender promo item" : ""}</div>
         </div>
+        <span>${escapeHtml(item.barcode || "No barcode")}</span>
         <strong>${price(item.price)}</strong>
         <button class="secondary-button" type="button">Remove</button>
       `;
@@ -436,16 +659,18 @@
   }
 
   function exportOrders() {
-    const header = ["order", "customer", "type", "payment", "subtotal", "discount", "tax", "total", "created_at"];
+    const header = ["order", "customer", "type", "source", "payment", "subtotal", "discount", "tax", "total", "note", "created_at"];
     const rows = state.orders.map((order) => [
       order.id,
       order.customer,
       order.orderType,
+      order.source || "In Store",
       order.payment,
       order.totals.subtotal.toFixed(2),
       order.totals.discount.toFixed(2),
       order.totals.tax.toFixed(2),
       order.totals.total.toFixed(2),
+      order.note || "",
       order.createdAt,
     ]);
     const csv = [header, ...rows].map((row) => row.map(csvValue).join(",")).join("\n");
@@ -480,6 +705,15 @@
   }
 
   elements.tabs.forEach((tab) => tab.addEventListener("click", () => setView(tab.dataset.view)));
+  elements.storeSelect.addEventListener("change", () => {
+    state.selectedStoreId = elements.storeSelect.value;
+    state.activeCategory = "All";
+    state.cart = [];
+    render();
+  });
+  document.querySelectorAll("[data-jump-register]").forEach((button) => button.addEventListener("click", () => setView("register")));
+  document.querySelectorAll("[data-jump-items]").forEach((button) => button.addEventListener("click", () => setView("items")));
+  document.querySelectorAll("[data-jump-orders]").forEach((button) => button.addEventListener("click", () => setView("orders")));
   elements.orderTypeButtons.forEach((button) => {
     button.addEventListener("click", () => {
       state.orderType = button.dataset.orderType;
@@ -495,6 +729,12 @@
     });
   });
   elements.itemSearch.addEventListener("input", renderMenu);
+  elements.barcodeScanInput.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      scanBarcode(elements.barcodeScanInput.value);
+    }
+  });
   elements.bogoToggle.addEventListener("change", renderCart);
   elements.checkoutButton.addEventListener("click", completeOrder);
   elements.clearCartButton.addEventListener("click", () => {
@@ -511,7 +751,7 @@
     try {
       await api("/api/login", {
         method: "POST",
-        body: JSON.stringify({ pin: elements.pinInput.value }),
+        body: JSON.stringify({ pin: elements.pinInput.value, mode: appMode }),
       });
       elements.pinInput.value = "";
       await loadRemoteState();
@@ -527,6 +767,8 @@
       name: elements.itemNameInput.value.trim(),
       category: elements.itemCategoryInput.value.trim(),
       price: Number(elements.itemPriceInput.value),
+      storeId: state.selectedStoreId,
+      barcode: elements.itemBarcodeInput.value.trim(),
       tender: elements.itemTenderInput.checked,
     });
     elements.itemForm.reset();
@@ -541,12 +783,42 @@
     render();
   });
 
+  elements.storeForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const name = elements.newStoreNameInput.value.trim();
+    if (!name) return;
+    const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || uid("store");
+    const id = state.stores.some((store) => store.id === slug) ? `${slug}-${Date.now().toString(36)}` : slug;
+    state.stores.push({ id, name, address: elements.newStoreAddressInput.value.trim() });
+    state.selectedStoreId = id;
+    state.activeCategory = "All";
+    state.cart = [];
+    elements.storeForm.reset();
+    render();
+  });
+
+  elements.registerForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const name = elements.newRegisterNameInput.value.trim();
+    const storeId = elements.newRegisterStoreSelect.value;
+    if (!name || !storeId) return;
+    const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || uid("register");
+    const id = state.registers.some((register) => register.id === slug) ? `${slug}-${Date.now().toString(36)}` : slug;
+    state.registers.push({ id, name, storeId });
+    state.selectedRegisterId = id;
+    state.selectedStoreId = storeId;
+    elements.registerForm.reset();
+    render();
+  });
+
   elements.orderTypeButtons.forEach((button) => button.classList.toggle("active", button.dataset.orderType === state.orderType));
   elements.paymentButtons.forEach((button) => button.classList.toggle("active", button.dataset.payment === state.payment));
+  applyAppMode();
   if (remoteMode) {
     setLoginVisible(true);
     loadRemoteState();
   } else {
     render();
+    setView(getAllowedViews()[0]);
   }
 })();
