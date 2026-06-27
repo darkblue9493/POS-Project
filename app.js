@@ -120,6 +120,11 @@
   let hydrated = !remoteMode;
   let saveTimer = null;
 
+  function setLoginVisible(visible) {
+    elements.loginScreen.hidden = !visible;
+    elements.loginScreen.classList.toggle("is-unlocked", !visible);
+  }
+
   function loadState() {
     try {
       const saved = JSON.parse(localStorage.getItem(storageKey));
@@ -163,11 +168,11 @@
         cart: [],
       };
       hydrated = true;
-      elements.loginScreen.hidden = true;
+      setLoginVisible(false);
       render();
     } catch (error) {
-      elements.loginScreen.hidden = false;
-      elements.loginMessage.textContent = "";
+      setLoginVisible(true);
+      elements.loginMessage.textContent = error.message === "Login required" ? "" : error.message;
     }
   }
 
@@ -539,7 +544,7 @@
   elements.orderTypeButtons.forEach((button) => button.classList.toggle("active", button.dataset.orderType === state.orderType));
   elements.paymentButtons.forEach((button) => button.classList.toggle("active", button.dataset.payment === state.payment));
   if (remoteMode) {
-    elements.loginScreen.hidden = false;
+    setLoginVisible(true);
     loadRemoteState();
   } else {
     render();

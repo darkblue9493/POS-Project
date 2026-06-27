@@ -36,7 +36,11 @@ body {
 }
 
 .login-screen[hidden] {
-  display: none;
+  display: none !important;
+}
+
+.login-screen.is-unlocked {
+  display: none !important;
 }
 
 .login-box {

@@ -1,4 +1,4 @@
-const cacheName = "pos-project-v1";
+const cacheName = "pos-project-v3";
 const assets = [
   "./",
   "./index.html",
@@ -9,11 +9,29 @@ const assets = [
 ];
 
 self.addEventListener("install", (event) => {
+  self.skipWaiting();
   event.waitUntil(caches.open(cacheName).then((cache) => cache.addAll(assets)));
 });
 
+self.addEventListener("activate", (event) => {
+  event.waitUntil(
+    caches.keys().then((keys) =>
+      Promise.all(keys.filter((key) => key !== cacheName).map((key) => caches.delete(key)))
+    ).then(() => self.clients.claim())
+  );
+});
+
 self.addEventListener("fetch", (event) => {
+  if (event.request.method !== "GET") return;
+  if (event.request.url.includes("/api/")) return;
+
   event.respondWith(
-    caches.match(event.request).then((cached) => cached || fetch(event.request))
+    fetch(event.request)
+      .then((response) => {
+        const copy = response.clone();
+        caches.open(cacheName).then((cache) => cache.put(event.request, copy));
+        return response;
+      })
+      .catch(() => caches.match(event.request))
   );
 });
