@@ -5,8 +5,8 @@ const os = require("os");
 const crypto = require("crypto");
 
 const root = __dirname;
-const dataDir = process.env.DATA_DIR || path.join(root, "data");
-const dbPath = path.join(dataDir, "pos-db.json");
+let dataDir = process.env.DATA_DIR || path.join(root, "data");
+let dbPath = path.join(dataDir, "pos-db.json");
 const port = Number(process.env.PORT || 4188);
 const posPin = String(process.env.POS_PIN || "1234");
 const sessions = new Map();
@@ -134,7 +134,13 @@ function isAuthenticated(req) {
 }
 
 function ensureDataFile() {
-  fs.mkdirSync(dataDir, { recursive: true });
+  try {
+    fs.mkdirSync(dataDir, { recursive: true });
+  } catch (error) {
+    dataDir = path.join(os.tmpdir(), "pos-project-data");
+    dbPath = path.join(dataDir, "pos-db.json");
+    fs.mkdirSync(dataDir, { recursive: true });
+  }
   if (!fs.existsSync(dbPath)) {
     fs.writeFileSync(dbPath, JSON.stringify(defaultDb, null, 2));
   }

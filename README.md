@@ -16,10 +16,9 @@ To use it anywhere:
 1. Upload this `pos project` folder to a hosting service that runs Node apps, such as Render.
 2. Set the app start command to `npm start`.
 3. Set `POS_PIN` to a private PIN.
-4. Set `DATA_DIR` to a persistent storage folder if your host supports disks.
-5. Open the live website address from any register, tablet, or phone.
+4. Open the live website address from any register, tablet, or phone.
 
-The included `render.yaml` is ready for Render with a small persistent disk. The live version uses a PIN screen and shared server storage.
+The included `render.yaml` is ready for Render's free-friendly setup without a paid disk. The live version uses a PIN screen and shared server storage, but orders/menu can reset after redeploys or server restarts unless you add paid persistent storage later.
 
 Included:
 

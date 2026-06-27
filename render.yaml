@@ -8,9 +8,3 @@ services:
     envVars:
       - key: POS_PIN
         sync: false
-      - key: DATA_DIR
-        value: /var/data
-    disk:
-      name: pos-project-data
-      mountPath: /var/data
-      sizeGB: 1
