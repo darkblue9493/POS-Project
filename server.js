@@ -21,23 +21,69 @@ const types = {
 };
 
 const defaultDb = {
+  menuVersion: "thomaston-raceway-2026-06-27",
   settings: {
-    storeName: "Tender House",
+    storeName: "Thomaston Raceway",
     taxRate: 8.25,
     receiptFooter: "Thank you for your order",
   },
   nextOrderNumber: 1001,
   orders: [],
   items: [
-    { id: "tender-3", name: "3 Piece Tenders", category: "Tenders", price: 7.99, tender: true },
-    { id: "tender-5", name: "5 Piece Tenders", category: "Tenders", price: 10.99, tender: true },
-    { id: "tender-8", name: "8 Piece Tenders", category: "Tenders", price: 15.99, tender: true },
-    { id: "combo-classic", name: "Tender Combo", category: "Combos", price: 12.99, tender: false },
-    { id: "combo-family", name: "Family Tender Box", category: "Combos", price: 29.99, tender: false },
-    { id: "side-fries", name: "Seasoned Fries", category: "Sides", price: 3.99, tender: false },
-    { id: "side-slaw", name: "Coleslaw", category: "Sides", price: 2.99, tender: false },
-    { id: "drink-soda", name: "Fountain Drink", category: "Drinks", price: 2.49, tender: false },
-    { id: "dessert-cookie", name: "Cookie", category: "Desserts", price: 1.99, tender: false }
+    { id: "bonein-box-2", name: "2 Piece Bone-In Box", category: "Krunch Box Bone-In", price: 8.09, tender: false },
+    { id: "bonein-box-3", name: "3 Piece Bone-In Box", category: "Krunch Box Bone-In", price: 9.59, tender: false },
+    { id: "bonein-box-4", name: "4 Piece Bone-In Box", category: "Krunch Box Bone-In", price: 11.09, tender: false },
+    { id: "chicken-biscuit-2", name: "2 Piece Chicken w/ Biscuit", category: "Chicken & Biscuit", price: 6.19, tender: false },
+    { id: "chicken-biscuit-3", name: "3 Piece Chicken w/ Biscuit", category: "Chicken & Biscuit", price: 8.09, tender: false },
+    { id: "chicken-biscuit-4", name: "4 Piece Chicken w/ Biscuit", category: "Chicken & Biscuit", price: 10.09, tender: false },
+    { id: "tender-box-3", name: "3 Piece Tender Box", category: "Krunch Box Tenders", price: 8.49, tender: true },
+    { id: "tender-box-4", name: "4 Piece Tender Box", category: "Krunch Box Tenders", price: 10.49, tender: true },
+    { id: "tender-box-6", name: "6 Piece Tender Box", category: "Krunch Box Tenders", price: 13.49, tender: true },
+    { id: "tender-biscuit-3", name: "3 Piece Tender w/ Biscuit", category: "Tender & Biscuit", price: 7.49, tender: true },
+    { id: "tender-biscuit-4", name: "4 Piece Tender w/ Biscuit", category: "Tender & Biscuit", price: 8.99, tender: true },
+    { id: "tender-biscuit-6", name: "6 Piece Tender w/ Biscuit", category: "Tender & Biscuit", price: 11.49, tender: true },
+    { id: "wings-5", name: "5 Piece Wings", category: "Wings", price: 7.99, tender: false },
+    { id: "wings-10", name: "10 Piece Wings", category: "Wings", price: 14.99, tender: false },
+    { id: "wings-20", name: "20 Piece Wings", category: "Wings", price: 24.99, tender: false },
+    { id: "shrimp-5", name: "5 Piece Shrimp w/ Biscuit", category: "Shrimp", price: 4.99, tender: false },
+    { id: "shrimp-10", name: "10 Piece Shrimp w/ Biscuit", category: "Shrimp", price: 7.99, tender: false },
+    { id: "sandwich", name: "Chicken Sandwich", category: "Sandwiches", price: 4.99, tender: false },
+    { id: "sandwich-combo", name: "Chicken Sandwich Combo", category: "Sandwiches", price: 6.99, tender: false },
+    { id: "family-chicken-tenders", name: "Family Chicken & Tenders", category: "Family Meals", price: 42.99, tender: true },
+    { id: "family-chicken-only", name: "Family Chicken Only", category: "Family Meals", price: 32.99, tender: false },
+    { id: "family-tenders-only", name: "Family Tenders Only", category: "Family Meals", price: 29.99, tender: true },
+    { id: "biscuit-1", name: "Honey Butter Biscuit (1)", category: "Biscuits", price: 0.99, tender: false },
+    { id: "biscuit-2", name: "Honey Butter Biscuits (2)", category: "Biscuits", price: 1.79, tender: false },
+    { id: "biscuit-6", name: "Honey Butter Biscuits (6)", category: "Biscuits", price: 4.59, tender: false },
+    { id: "wedges-small", name: "Wedges Small", category: "Sides", price: 2.49, tender: false },
+    { id: "wedges-large", name: "Wedges Large", category: "Sides", price: 3.99, tender: false },
+    { id: "wedges-family", name: "Wedges Family", category: "Sides", price: 5.49, tender: false },
+    { id: "mashed-small", name: "Mashed Potatoes Small", category: "Sides", price: 2.59, tender: false },
+    { id: "mashed-large", name: "Mashed Potatoes Large", category: "Sides", price: 4.59, tender: false },
+    { id: "beans-small", name: "Red Beans & Rice Small", category: "Sides", price: 2.59, tender: false },
+    { id: "beans-large", name: "Red Beans & Rice Large", category: "Sides", price: 4.59, tender: false },
+    { id: "mac-small", name: "Mac n Cheese Small", category: "Sides", price: 2.59, tender: false },
+    { id: "mac-large", name: "Mac n Cheese Large", category: "Sides", price: 4.59, tender: false },
+    { id: "jambalaya-small", name: "Jambalaya Small", category: "Sides", price: 2.59, tender: false },
+    { id: "jambalaya-large", name: "Jambalaya Large", category: "Sides", price: 4.59, tender: false },
+    { id: "ala-leg", name: "Leg", category: "A La Carte", price: 2.59, tender: false },
+    { id: "ala-thigh", name: "Thigh", category: "A La Carte", price: 2.59, tender: false },
+    { id: "ala-wing", name: "Wing", category: "A La Carte", price: 2.29, tender: false },
+    { id: "ala-tender", name: "Tender", category: "A La Carte", price: 2.29, tender: true },
+    { id: "only-chicken-8", name: "Only Chicken 8 Piece", category: "Only Chicken", price: 16.99, tender: false },
+    { id: "only-chicken-12", name: "Only Chicken 12 Piece", category: "Only Chicken", price: 24.99, tender: false },
+    { id: "only-chicken-16", name: "Only Chicken 16 Piece", category: "Only Chicken", price: 32.99, tender: false },
+    { id: "only-tenders-8", name: "Only Tenders 8 Piece", category: "Only Tenders", price: 15.99, tender: true },
+    { id: "only-tenders-12", name: "Only Tenders 12 Piece", category: "Only Tenders", price: 23.99, tender: true },
+    { id: "only-tenders-16", name: "Only Tenders 16 Piece", category: "Only Tenders", price: 31.99, tender: true },
+    { id: "nuggets-biscuit-6", name: "6 Nuggets w/ Biscuit", category: "Nuggets", price: 5.49, tender: false },
+    { id: "nuggets-biscuit-10", name: "10 Nuggets w/ Biscuit", category: "Nuggets", price: 7.49, tender: false },
+    { id: "nuggets-box-6", name: "6 Nuggets Krunch Box", category: "Nuggets", price: 6.99, tender: false },
+    { id: "nuggets-box-10", name: "10 Nuggets Krunch Box", category: "Nuggets", price: 8.99, tender: false },
+    { id: "nuggets-6", name: "6 Nuggets", category: "Nuggets", price: 4.99, tender: false },
+    { id: "nuggets-10", name: "10 Nuggets", category: "Nuggets", price: 6.99, tender: false },
+    { id: "corn-dog", name: "Corn Dog", category: "Misc", price: 1.99, tender: false },
+    { id: "egg-roll", name: "Egg Roll", category: "Misc", price: 2.19, tender: false }
   ]
 };
 
@@ -97,6 +143,18 @@ function ensureDataFile() {
 function readDb() {
   ensureDataFile();
   const saved = JSON.parse(fs.readFileSync(dbPath, "utf8"));
+  if (saved.menuVersion !== defaultDb.menuVersion) {
+    const migratedSettings = { ...defaultDb.settings, ...saved.settings };
+    if (!saved.settings || saved.settings.storeName === "Tender House") {
+      migratedSettings.storeName = defaultDb.settings.storeName;
+    }
+    return {
+      ...defaultDb,
+      settings: migratedSettings,
+      nextOrderNumber: Number(saved.nextOrderNumber) || defaultDb.nextOrderNumber,
+      orders: Array.isArray(saved.orders) ? saved.orders : []
+    };
+  }
   return {
     ...defaultDb,
     ...saved,
@@ -151,6 +209,7 @@ async function handleApi(req, res, url) {
   if (req.method === "PUT" && url.pathname === "/api/state") {
     const body = await readBody(req);
     writeDb({
+      menuVersion: body.menuVersion || defaultDb.menuVersion,
       settings: body.settings || defaultDb.settings,
       nextOrderNumber: Number(body.nextOrderNumber) || 1001,
       items: Array.isArray(body.items) ? body.items : [],
