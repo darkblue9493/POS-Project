@@ -35,6 +35,10 @@ body {
   background: #eef3ee;
 }
 
+.login-screen[hidden] {
+  display: none;
+}
+
 .login-box {
   width: min(380px, 100%);
   background: #fff;
