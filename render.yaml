@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: pos-project
+    env: node
+    plan: starter
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: POS_PIN
+        sync: false
+      - key: DATA_DIR
+        value: /var/data
+    disk:
+      name: pos-project-data
+      mountPath: /var/data
+      sizeGB: 1

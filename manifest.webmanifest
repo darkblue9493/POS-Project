@@ -1,0 +1,15 @@
+{
+  "name": "POS Project",
+  "short_name": "POS",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#eef3ee",
+  "theme_color": "#16241d",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

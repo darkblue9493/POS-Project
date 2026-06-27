@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Store POS</title>
+    <meta name="theme-color" content="#16241d" />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="login-screen" id="loginScreen" hidden>
+      <form class="login-box" id="loginForm">
+        <div class="brand-mark">POS</div>
+        <div>
+          <p class="eyebrow">Secure register</p>
+          <h1>POS Project</h1>
+        </div>
+        <input id="pinInput" type="password" inputmode="numeric" autocomplete="current-password" placeholder="Enter PIN" required />
+        <button class="checkout-button" type="submit">Unlock</button>
+        <p id="loginMessage" class="login-message"></p>
+      </form>
+    </div>
+
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="brand-block">
+          <div class="brand-mark">POS</div>
+          <div>
+            <p class="eyebrow">Live register</p>
+            <h1 id="storeName">Tender House</h1>
+          </div>
+        </div>
+
+        <nav class="nav-tabs" aria-label="POS views">
+          <button class="tab-button active" type="button" data-view="register" title="Register">Register</button>
+          <button class="tab-button" type="button" data-view="orders" title="Orders">Orders</button>
+          <button class="tab-button" type="button" data-view="items" title="Items">Items</button>
+          <button class="tab-button" type="button" data-view="settings" title="Settings">Settings</button>
+        </nav>
+
+        <div class="status-panel">
+          <span class="status-dot"></span>
+          <span id="modeLabel">Local mode</span>
+        </div>
+      </aside>
+
+      <main class="workspace">
+        <section class="view active" id="registerView">
+          <header class="workspace-header">
+            <div>
+              <p class="eyebrow">New sale</p>
+              <h2>Register</h2>
+            </div>
+            <div class="header-actions">
+              <div class="segmented" role="group" aria-label="Order type">
+                <button class="segment active" type="button" data-order-type="dine-in">Dine in</button>
+                <button class="segment" type="button" data-order-type="pickup">Pickup</button>
+                <button class="segment" type="button" data-order-type="delivery">Delivery</button>
+              </div>
+            </div>
+          </header>
+
+          <div class="register-layout">
+            <section class="menu-panel" aria-label="Menu">
+              <div class="toolbar">
+                <label class="search-field">
+                  <span>Search</span>
+                  <input id="itemSearch" type="search" placeholder="Find item" autocomplete="off" />
+                </label>
+                <div class="category-strip" id="categoryStrip"></div>
+              </div>
+              <div class="menu-grid" id="menuGrid"></div>
+            </section>
+
+            <aside class="cart-panel" aria-label="Current order">
+              <div class="cart-head">
+                <div>
+                  <p class="eyebrow">Ticket</p>
+                  <h2 id="ticketNumber">Order #1001</h2>
+                </div>
+                <button class="icon-button" id="clearCartButton" type="button" title="Clear ticket">Clear</button>
+              </div>
+
+              <div class="customer-row">
+                <input id="customerName" type="text" placeholder="Customer name" />
+              </div>
+
+              <div class="cart-items" id="cartItems"></div>
+
+              <div class="promo-row">
+                <label class="toggle-line">
+                  <input id="bogoToggle" type="checkbox" />
+                  <span>BOGO tenders</span>
+                </label>
+              </div>
+
+              <div class="summary">
+                <div><span>Subtotal</span><strong id="subtotal">$0.00</strong></div>
+                <div><span>Discount</span><strong id="discount">-$0.00</strong></div>
+                <div><span>Tax</span><strong id="tax">$0.00</strong></div>
+                <div class="total"><span>Total</span><strong id="total">$0.00</strong></div>
+              </div>
+
+              <div class="payment-grid">
+                <button class="pay-method active" type="button" data-payment="Cash">Cash</button>
+                <button class="pay-method" type="button" data-payment="Card">Card</button>
+                <button class="pay-method" type="button" data-payment="Online">Online</button>
+              </div>
+
+              <button class="checkout-button" id="checkoutButton" type="button">Complete order</button>
+            </aside>
+          </div>
+        </section>
+
+        <section class="view" id="ordersView">
+          <header class="workspace-header">
+            <div>
+              <p class="eyebrow">Today</p>
+              <h2>Orders</h2>
+            </div>
+            <button class="secondary-button" id="exportOrdersButton" type="button">Export CSV</button>
+          </header>
+          <div class="orders-table-wrap">
+            <table class="orders-table">
+              <thead>
+                <tr>
+                  <th>Order</th>
+                  <th>Customer</th>
+                  <th>Type</th>
+                  <th>Payment</th>
+                  <th>Total</th>
+                  <th>Time</th>
+                </tr>
+              </thead>
+              <tbody id="ordersTableBody"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="view" id="itemsView">
+          <header class="workspace-header">
+            <div>
+              <p class="eyebrow">Menu</p>
+              <h2>Items</h2>
+            </div>
+          </header>
+          <form class="item-form" id="itemForm">
+            <input id="itemNameInput" type="text" placeholder="Item name" required />
+            <input id="itemCategoryInput" type="text" placeholder="Category" required />
+            <input id="itemPriceInput" type="number" min="0" step="0.01" placeholder="Price" required />
+            <label class="toggle-line compact">
+              <input id="itemTenderInput" type="checkbox" />
+              <span>Tender item</span>
+            </label>
+            <button class="primary-button" type="submit">Add item</button>
+          </form>
+          <div class="item-list" id="itemList"></div>
+        </section>
+
+        <section class="view" id="settingsView">
+          <header class="workspace-header">
+            <div>
+              <p class="eyebrow">Store</p>
+              <h2>Settings</h2>
+            </div>
+          </header>
+          <form class="settings-form" id="settingsForm">
+            <label>
+              <span>Store name</span>
+              <input id="settingsStoreName" type="text" />
+            </label>
+            <label>
+              <span>Sales tax percent</span>
+              <input id="settingsTaxRate" type="number" min="0" max="25" step="0.01" />
+            </label>
+            <label>
+              <span>Receipt footer</span>
+              <input id="settingsReceiptFooter" type="text" />
+            </label>
+            <button class="primary-button" type="submit">Save settings</button>
+          </form>
+        </section>
+      </main>
+    </div>
+
+    <dialog id="receiptDialog">
+      <div class="receipt" id="receiptContent"></div>
+      <div class="dialog-actions">
+        <button class="secondary-button" id="printReceiptButton" type="button">Print</button>
+        <button class="primary-button" id="closeReceiptButton" type="button">Done</button>
+      </div>
+    </dialog>
+
+    <script src="./app.js"></script>
+    <script>
+      if ("serviceWorker" in navigator && location.protocol !== "file:") {
+        navigator.serviceWorker.register("./service-worker.js");
+      }
+    </script>
+  </body>
+</html>
