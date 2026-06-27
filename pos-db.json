@@ -1,0 +1,74 @@
+{
+  "settings": {
+    "storeName": "Tender House",
+    "taxRate": 8.25,
+    "receiptFooter": "Thank you for your order"
+  },
+  "nextOrderNumber": 1001,
+  "orders": [],
+  "items": [
+    {
+      "id": "tender-3",
+      "name": "3 Piece Tenders",
+      "category": "Tenders",
+      "price": 7.99,
+      "tender": true
+    },
+    {
+      "id": "tender-5",
+      "name": "5 Piece Tenders",
+      "category": "Tenders",
+      "price": 10.99,
+      "tender": true
+    },
+    {
+      "id": "tender-8",
+      "name": "8 Piece Tenders",
+      "category": "Tenders",
+      "price": 15.99,
+      "tender": true
+    },
+    {
+      "id": "combo-classic",
+      "name": "Tender Combo",
+      "category": "Combos",
+      "price": 12.99,
+      "tender": false
+    },
+    {
+      "id": "combo-family",
+      "name": "Family Tender Box",
+      "category": "Combos",
+      "price": 29.99,
+      "tender": false
+    },
+    {
+      "id": "side-fries",
+      "name": "Seasoned Fries",
+      "category": "Sides",
+      "price": 3.99,
+      "tender": false
+    },
+    {
+      "id": "side-slaw",
+      "name": "Coleslaw",
+      "category": "Sides",
+      "price": 2.99,
+      "tender": false
+    },
+    {
+      "id": "drink-soda",
+      "name": "Fountain Drink",
+      "category": "Drinks",
+      "price": 2.49,
+      "tender": false
+    },
+    {
+      "id": "dessert-cookie",
+      "name": "Cookie",
+      "category": "Desserts",
+      "price": 1.99,
+      "tender": false
+    }
+  ]
+}
