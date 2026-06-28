@@ -91,6 +91,8 @@
     todayOrders: document.getElementById("todayOrders"),
     averageTicket: document.getElementById("averageTicket"),
     paymentMix: document.getElementById("paymentMix"),
+    inventoryCount: document.getElementById("inventoryCount"),
+    activePromoCount: document.getElementById("activePromoCount"),
     recentOrders: document.getElementById("recentOrders"),
     loginScreen: document.getElementById("loginScreen"),
     loginForm: document.getElementById("loginForm"),
@@ -287,7 +289,9 @@
     const subtotal = state.cart.reduce((sum, line) => sum + line.price * line.qty, 0);
     const discount = (elements.bogoToggle.checked ? getBogoDiscount() : 0) + getPromotionDiscount();
     const taxable = Math.max(0, subtotal - discount);
-    const tax = taxable * ((Number(state.settings.taxRate) || 0) / 100);
+    const selectedStore = getSelectedStore();
+    const taxRate = selectedStore.taxRate ?? state.settings.taxRate;
+    const tax = taxable * ((Number(taxRate) || 0) / 100);
     return { subtotal, discount, tax, total: taxable + tax };
   }
 
@@ -306,7 +310,11 @@
     return state.promotions
       .filter((promo) => promo.storeId === state.selectedStoreId && promo.active)
       .reduce((sum, promo) => {
-        const line = state.cart.find((cartLine) => cartLine.id === promo.itemId);
+        const promoItem = state.items.find((item) => item.id === promo.itemId);
+        const line = state.cart.find((cartLine) =>
+          cartLine.id === promo.itemId ||
+          (promoItem && cartLine.name === promoItem.name && cartLine.storeId === promoItem.storeId)
+        );
         if (!line) return sum;
         const groupCount = Math.floor(line.qty / Math.max(1, Number(promo.buyQty) || 1));
         return sum + groupCount * (Number(promo.discountAmount) || 0);
@@ -323,12 +331,13 @@
 
   function render() {
     ensureSelectedStore();
-    elements.storeName.textContent = state.settings.storeName;
+    const selectedStore = getSelectedStore();
+    elements.storeName.textContent = selectedStore.name;
     elements.modeLabel.textContent = remoteMode ? "Shared mode" : "Local mode";
     elements.ticketNumber.textContent = `Order #${state.nextOrderNumber}`;
-    elements.settingsStoreName.value = state.settings.storeName;
-    elements.settingsTaxRate.value = state.settings.taxRate;
-    elements.settingsReceiptFooter.value = state.settings.receiptFooter;
+    elements.settingsStoreName.value = selectedStore.name;
+    elements.settingsTaxRate.value = selectedStore.taxRate ?? state.settings.taxRate;
+    elements.settingsReceiptFooter.value = selectedStore.receiptFooter ?? state.settings.receiptFooter;
     renderCategories();
     renderStoreSelect();
     renderStoreList();
@@ -397,6 +406,10 @@
     return `register.html?store=${encodeURIComponent(store.id)}`;
   }
 
+  function getAbsoluteStoreRegisterLink(store) {
+    return new URL(getStoreRegisterLink(store), location.href).href;
+  }
+
   function renderStoreList() {
     if (!elements.storeList) return;
     elements.storeList.innerHTML = "";
@@ -406,7 +419,7 @@
       row.innerHTML = `
         <div>
           <strong>${escapeHtml(store.name)}</strong>
-          <div class="line-meta">${escapeHtml(store.address || "No address")} / ${escapeHtml(getStoreRegisterLink(store))}</div>
+          <div class="line-meta">${escapeHtml(store.address || "No address")} / ${escapeHtml(getAbsoluteStoreRegisterLink(store))}</div>
         </div>
         <a class="secondary-button link-button" href="${getStoreRegisterLink(store)}">Open</a>
         <button class="secondary-button" type="button" data-action="pin">Change PIN</button>
@@ -511,6 +524,8 @@
     elements.todayOrders.textContent = String(orders.length);
     elements.averageTicket.textContent = price(orders.length ? total / orders.length : 0);
     elements.paymentMix.textContent = `${paymentCounts.Cash || 0} / ${paymentCounts.Card || 0} / ${paymentCounts.Online || 0}`;
+    elements.inventoryCount.textContent = String(state.items.filter((item) => item.storeId === state.selectedStoreId).length);
+    elements.activePromoCount.textContent = String(state.promotions.filter((promo) => promo.storeId === state.selectedStoreId && promo.active).length);
     elements.recentOrders.innerHTML = "";
 
     if (!state.orders.length) {
@@ -693,8 +708,9 @@
   }
 
   function showReceipt(order) {
+    const selectedStore = getSelectedStore();
     elements.receiptContent.innerHTML = `
-      <h3>${escapeHtml(state.settings.storeName)}</h3>
+      <h3>${escapeHtml(order.storeName || selectedStore.name)}</h3>
       <p>Order #${order.id}<br>${new Date(order.createdAt).toLocaleString()}<br>${escapeHtml(order.customer)}<br>${escapeHtml(order.storeName || getSelectedStore().name)} / ${escapeHtml(order.registerName || getSelectedRegister().name)}<br>${escapeHtml(order.source || "In Store")}</p>
       ${order.note ? `<p>Note: ${escapeHtml(order.note)}</p>` : ""}
       ${order.items
@@ -713,7 +729,7 @@
       <div class="receipt-line"><span>Discount</span><strong>-${price(order.totals.discount)}</strong></div>
       <div class="receipt-line"><span>Tax</span><strong>${price(order.totals.tax)}</strong></div>
       <div class="receipt-line"><span>Total</span><strong>${price(order.totals.total)}</strong></div>
-      <p>${escapeHtml(state.settings.receiptFooter)}</p>
+      <p>${escapeHtml(selectedStore.receiptFooter ?? state.settings.receiptFooter)}</p>
     `;
     elements.receiptDialog.showModal();
   }
@@ -858,6 +874,12 @@
   }
 
   elements.tabs.forEach((tab) => tab.addEventListener("click", () => setView(tab.dataset.view)));
+  document.querySelectorAll("[data-add-store]").forEach((button) => {
+    button.addEventListener("click", () => {
+      setView("settings");
+      elements.newStoreNameInput.focus();
+    });
+  });
   elements.storeSelect.addEventListener("change", () => {
     state.selectedStoreId = elements.storeSelect.value;
     state.activeCategory = "All";
@@ -866,6 +888,7 @@
   });
   document.querySelectorAll("[data-jump-register]").forEach((button) => button.addEventListener("click", () => setView("register")));
   document.querySelectorAll("[data-jump-items]").forEach((button) => button.addEventListener("click", () => setView("items")));
+  document.querySelectorAll("[data-jump-promotions]").forEach((button) => button.addEventListener("click", () => setView("promotions")));
   document.querySelectorAll("[data-jump-orders]").forEach((button) => button.addEventListener("click", () => setView("orders")));
   elements.orderTypeButtons.forEach((button) => {
     button.addEventListener("click", () => {
@@ -932,12 +955,14 @@
 
   elements.promotionForm.addEventListener("submit", (event) => {
     event.preventDefault();
-    if (!elements.promoItemSelect.value) return;
+      if (!elements.promoItemSelect.value) return;
+    const item = state.items.find((candidate) => candidate.id === elements.promoItemSelect.value);
     state.promotions.push({
       id: uid("promo"),
       storeId: state.selectedStoreId,
       name: elements.promoNameInput.value.trim(),
       itemId: elements.promoItemSelect.value,
+      itemName: item ? item.name : "",
       buyQty: Number(elements.promoBuyQtyInput.value) || 1,
       discountAmount: Number(elements.promoDiscountInput.value) || 0,
       active: elements.promoActiveInput.checked,
@@ -949,9 +974,13 @@
 
   elements.settingsForm.addEventListener("submit", (event) => {
     event.preventDefault();
-    state.settings.storeName = elements.settingsStoreName.value.trim() || defaultState.settings.storeName;
-    state.settings.taxRate = Number(elements.settingsTaxRate.value) || 0;
-    state.settings.receiptFooter = elements.settingsReceiptFooter.value.trim();
+    const selectedStore = getSelectedStore();
+    selectedStore.name = elements.settingsStoreName.value.trim() || selectedStore.name;
+    selectedStore.taxRate = Number(elements.settingsTaxRate.value) || 0;
+    selectedStore.receiptFooter = elements.settingsReceiptFooter.value.trim();
+    state.settings.storeName = selectedStore.name;
+    state.settings.taxRate = selectedStore.taxRate;
+    state.settings.receiptFooter = selectedStore.receiptFooter;
     render();
   });
 

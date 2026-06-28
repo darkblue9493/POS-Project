@@ -4,9 +4,15 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>POS Back Office</title>
-    <meta http-equiv="refresh" content="0; url=./index.html?mode=back-office" />
   </head>
   <body>
-    <p><a href="./index.html?mode=back-office">Open Back Office</a></p>
+    <p><a id="backOfficeLink" href="./index.html?mode=back-office">Open Back Office</a></p>
+    <script>
+      const params = new URLSearchParams(location.search);
+      params.set("mode", "back-office");
+      const target = `./index.html?${params.toString()}`;
+      document.getElementById("backOfficeLink").href = target;
+      location.replace(target);
+    </script>
   </body>
 </html>

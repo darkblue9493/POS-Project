@@ -36,15 +36,10 @@
           <button class="tab-button active" type="button" data-view="dashboard" data-modes="back-office" title="Dashboard">Dashboard</button>
           <button class="tab-button" type="button" data-view="register" data-modes="register" title="Register">Register</button>
           <button class="tab-button" type="button" data-view="orders" data-modes="register back-office" title="Orders">Orders</button>
-          <button class="tab-button" type="button" data-view="items" data-modes="back-office" title="Back Office">Back Office</button>
+          <button class="tab-button" type="button" data-view="items" data-modes="back-office" title="Inventory">Inventory</button>
           <button class="tab-button" type="button" data-view="promotions" data-modes="back-office" title="Promotions">Promotions</button>
           <button class="tab-button" type="button" data-view="settings" data-modes="back-office" title="Settings">Settings</button>
         </nav>
-
-        <div class="mode-links">
-          <a href="./register.html">Register</a>
-          <a href="./back-office.html">Back Office</a>
-        </div>
 
         <div class="status-panel">
           <span class="status-dot"></span>
@@ -64,7 +59,7 @@
               <p class="eyebrow">Today</p>
               <h2>Dashboard</h2>
             </div>
-            <button class="primary-button" type="button" data-jump-register>New sale</button>
+            <button class="primary-button" type="button" data-add-store>Add store</button>
           </header>
 
           <div class="dashboard-grid">
@@ -84,6 +79,14 @@
               <span>Cash / Card / Online</span>
               <strong id="paymentMix">0 / 0 / 0</strong>
             </article>
+            <article class="metric-tile">
+              <span>Products</span>
+              <strong id="inventoryCount">0</strong>
+            </article>
+            <article class="metric-tile">
+              <span>Active promos</span>
+              <strong id="activePromoCount">0</strong>
+            </article>
           </div>
 
           <div class="dashboard-layout">
@@ -92,13 +95,17 @@
                 <h3>Quick Actions</h3>
               </div>
               <div class="quick-actions">
-                <button class="action-button" type="button" data-jump-register>
-                  <strong>Start Order</strong>
-                  <span>Open the register</span>
+                <button class="action-button" type="button" data-add-store>
+                  <strong>Add Store</strong>
+                  <span>Create a store and PIN</span>
                 </button>
                 <button class="action-button" type="button" data-jump-items>
-                  <strong>Add Menu Item</strong>
-                  <span>Update item library</span>
+                  <strong>Inventory</strong>
+                  <span>Add products and counts</span>
+                </button>
+                <button class="action-button" type="button" data-jump-promotions>
+                  <strong>Promotions</strong>
+                  <span>Automatic discounts</span>
                 </button>
                 <button class="action-button" type="button" data-jump-orders>
                   <strong>Review Orders</strong>
@@ -226,7 +233,7 @@
           <header class="workspace-header">
             <div>
               <p class="eyebrow">Back office</p>
-              <h2>Item Library</h2>
+              <h2>Inventory</h2>
             </div>
           </header>
           <form class="item-form" id="itemForm">
@@ -306,7 +313,7 @@
             <button class="primary-button" type="submit">Create store</button>
           </form>
           <div class="item-list" id="storeList"></div>
-          <form class="settings-form" id="registerForm">
+          <form class="settings-form is-hidden" id="registerForm">
             <label>
               <span>Register name</span>
               <input id="newRegisterNameInput" type="text" placeholder="Atlanta Front Register" />
@@ -317,7 +324,7 @@
             </label>
             <button class="primary-button" type="submit">Create register</button>
           </form>
-          <div class="item-list" id="registerList"></div>
+          <div class="item-list is-hidden" id="registerList"></div>
         </section>
       </main>
     </div>

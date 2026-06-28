@@ -4,9 +4,15 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>POS Register</title>
-    <meta http-equiv="refresh" content="0; url=./index.html?mode=register" />
   </head>
   <body>
-    <p><a href="./index.html?mode=register">Open Register</a></p>
+    <p><a id="registerLink" href="./index.html?mode=register">Open Register</a></p>
+    <script>
+      const params = new URLSearchParams(location.search);
+      params.set("mode", "register");
+      const target = `./index.html?${params.toString()}`;
+      document.getElementById("registerLink").href = target;
+      location.replace(target);
+    </script>
   </body>
 </html>
