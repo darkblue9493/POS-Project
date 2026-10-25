@@ -1238,6 +1238,10 @@
     } catch (error) {
       // The local login screen still protects the next operation if the session already expired.
     }
+    if (remoteMode) {
+      location.assign("./");
+      return;
+    }
     hydrated = false;
     state.cart = [];
     setLoginRole(appMode);
