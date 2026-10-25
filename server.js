@@ -132,15 +132,19 @@ function getCookie(req, name) {
   return found ? decodeURIComponent(found.slice(name.length + 1)) : "";
 }
 
-function isAuthenticated(req) {
+function getSession(req) {
   const token = getCookie(req, "pos_session");
   const session = sessions.get(token);
-  if (!session) return false;
+  if (!session) return null;
   if (Date.now() - session.createdAt > sessionMaxAgeMs) {
     sessions.delete(token);
-    return false;
+    return null;
   }
-  return true;
+  return session;
+}
+
+function isAuthenticated(req) {
+  return Boolean(getSession(req));
 }
 
 function ensureDataFile() {
@@ -218,6 +222,7 @@ async function handleApi(req, res, url) {
     const requestedStore = db.stores.find((store) => store.id === body.storeId);
     const pin = String(body.pin || "");
     let loginStore = null;
+    let loginUser = null;
     let registerAccessPin = "";
     if (role === "register") {
       if (requestedStore) {
@@ -232,6 +237,7 @@ async function handleApi(req, res, url) {
         ];
         if (matches.length === 1) {
           loginStore = db.stores.find((store) => store.id === matches[0].storeId) || null;
+          loginUser = userMatches.find((user) => user.storeId === matches[0].storeId && String(user.pin) === matches[0].pin) || null;
           registerAccessPin = matches[0].pin;
         }
         if (matches.length > 1) {
@@ -246,12 +252,12 @@ async function handleApi(req, res, url) {
       return;
     }
     const token = crypto.randomBytes(24).toString("hex");
-    sessions.set(token, { createdAt: Date.now(), role, storeId: loginStore?.id || null });
+    sessions.set(token, { createdAt: Date.now(), role, storeId: loginStore?.id || null, cashierName: loginUser?.name || "Cashier 1" });
     res.writeHead(200, {
       "content-type": "application/json; charset=utf-8",
       "set-cookie": `pos_session=${encodeURIComponent(token)}; HttpOnly; SameSite=Lax; Path=/; Max-Age=${Math.floor(sessionMaxAgeMs / 1000)}`
     });
-    res.end(JSON.stringify({ ok: true, storeId: loginStore?.id || null }));
+    res.end(JSON.stringify({ ok: true, storeId: loginStore?.id || null, cashierName: loginUser?.name || "Cashier 1" }));
     return;
   }
 
@@ -271,7 +277,8 @@ async function handleApi(req, res, url) {
   }
 
   if (req.method === "GET" && url.pathname === "/api/state") {
-    sendJson(res, 200, { ok: true, state: readDb() });
+    const session = getSession(req);
+    sendJson(res, 200, { ok: true, state: readDb(), session: { role: session?.role, storeId: session?.storeId, cashierName: session?.cashierName || "Cashier 1" } });
     return;
   }
 

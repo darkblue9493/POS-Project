@@ -188,6 +188,7 @@
   let saveTimer = null;
   const appMode = getAppMode();
   let loginRole = appMode;
+  let currentCashierName = "Cashier 1";
 
   function getAppMode() {
     const mode = new URLSearchParams(location.search).get("mode");
@@ -272,7 +273,7 @@
     return data;
   }
 
-  async function loadRemoteState(preferredStoreId = "") {
+  async function loadRemoteState(preferredStoreId = "", preferredCashierName = "") {
     if (!remoteMode) return;
     try {
       const data = await api("/api/state");
@@ -285,6 +286,7 @@
         payment: state.payment,
         cart: [],
       };
+      currentCashierName = preferredCashierName || data.session?.cashierName || "Cashier 1";
       hydrated = true;
       setLoginVisible(false);
       render();
@@ -473,10 +475,12 @@
     state.stores.forEach((store) => {
       const row = document.createElement("div");
       row.className = "item-list-row store-list-row";
+      const cashiers = state.users.filter((user) => user.storeId === store.id);
       row.innerHTML = `
         <div>
           <strong>${escapeHtml(store.name)}</strong>
           <div class="line-meta">${escapeHtml(store.address || "No address")} / ${escapeHtml(getAbsoluteStoreRegisterLink(store))}</div>
+          <div class="line-meta">Cashiers: ${cashiers.length ? escapeHtml(cashiers.map((user) => user.name).join(", ")) : "None yet"}</div>
         </div>
         <a class="secondary-button link-button" href="${getStoreRegisterLink(store)}">Open</a>
         <button class="secondary-button" type="button" data-action="pin">Change PIN</button>
@@ -583,13 +587,29 @@
     users.forEach((user) => {
       const row = document.createElement("div");
       row.className = "item-list-row";
-      row.innerHTML = `<div><strong>${escapeHtml(user.name)}</strong><div class="line-meta">Cashier access for this store</div></div><span>PIN protected</span><button class="secondary-button danger-button" type="button">Remove</button>`;
-      row.querySelector("button").addEventListener("click", () => {
+      row.innerHTML = `<div><strong>${escapeHtml(user.name)}</strong><div class="line-meta">Cashier access for this store</div></div><span>PIN protected</span><button class="secondary-button" type="button" data-action="reset">Reset PIN</button><button class="secondary-button danger-button" type="button" data-action="remove">Remove</button>`;
+      row.querySelector('[data-action="reset"]').addEventListener("click", () => resetUserPin(user.id));
+      row.querySelector('[data-action="remove"]').addEventListener("click", () => {
         state.users = state.users.filter((candidate) => candidate.id !== user.id);
         render();
       });
       elements.userList.appendChild(row);
     });
+  }
+
+  async function resetUserPin(userId) {
+    const user = state.users.find((candidate) => candidate.id === userId);
+    if (!user) return;
+    const pin = window.prompt(`Enter a new PIN for ${user.name}`)?.trim();
+    if (!pin) return;
+    const duplicate = state.users.some((candidate) => candidate.id !== user.id && String(candidate.pin) === pin) || state.stores.some((store) => String(store.pin) === pin);
+    if (duplicate) {
+      window.alert("Each register and cashier must use a different PIN.");
+      return;
+    }
+    user.pin = pin;
+    render();
+    await persistNow();
   }
 
   function getTodaysOrders() {
@@ -837,6 +857,7 @@
       receiptHeader: getSelectedStore().receiptHeader || getSelectedStore().name,
       registerId: state.selectedRegisterId,
       registerName: getSelectedRegister().name,
+      cashierName: currentCashierName || "Cashier 1",
       orderType: state.orderType,
       source: elements.orderSource.value,
       note: elements.ticketNote.value.trim(),
@@ -867,7 +888,7 @@
     const selectedStore = getSelectedStore();
     elements.receiptContent.innerHTML = `
       <h3>${escapeHtml(order.receiptHeader || order.storeName || selectedStore.receiptHeader || selectedStore.name)}</h3>
-      <p>Order #${order.id}<br>${new Date(order.createdAt).toLocaleString()}<br>${escapeHtml(order.customer)}<br>${escapeHtml(order.storeName || getSelectedStore().name)} / ${escapeHtml(order.registerName || getSelectedRegister().name)}<br>${escapeHtml(order.source || "In Store")}</p>
+      <p>Order #${order.id}<br>${new Date(order.createdAt).toLocaleString()}<br>${escapeHtml(order.customer)}<br>${escapeHtml(order.storeName || getSelectedStore().name)} / ${escapeHtml(order.registerName || getSelectedRegister().name)}<br>Cashier: ${escapeHtml(order.cashierName || "Cashier 1")}<br>${escapeHtml(order.source || "In Store")}</p>
       ${order.note ? `<p>Note: ${escapeHtml(order.note)}</p>` : ""}
       ${order.items
         .map(
@@ -1203,7 +1224,7 @@
         location.assign("./back-office.html");
         return;
       }
-      await loadRemoteState(login.storeId || "");
+      await loadRemoteState(login.storeId || "", login.cashierName || "");
     } catch (error) {
       elements.loginMessage.textContent = error.message;
     }
@@ -1280,10 +1301,31 @@
     event.preventDefault();
     const name = elements.newStoreNameInput.value.trim();
     if (!name) return;
+    const sourceStoreId = state.selectedStoreId;
+    const sourceStore = getSelectedStore();
     const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || uid("store");
     const id = state.stores.some((store) => store.id === slug) ? `${slug}-${Date.now().toString(36)}` : slug;
-    state.stores.push({ id, name, address: elements.newStoreAddressInput.value.trim(), pin: String(elements.newStorePinInput.value.trim() || "1234") });
+    state.stores.push({
+      id,
+      name,
+      address: elements.newStoreAddressInput.value.trim(),
+      pin: String(elements.newStorePinInput.value.trim() || "1234"),
+      taxRate: sourceStore.taxRate ?? state.settings.taxRate,
+      receiptHeader: sourceStore.receiptHeader || sourceStore.name,
+      receiptFooter: sourceStore.receiptFooter ?? state.settings.receiptFooter
+    });
+    const itemIds = new Map();
+    state.items.filter((item) => item.storeId === sourceStoreId).forEach((item) => {
+      const newItemId = `${item.id}-${id}`;
+      itemIds.set(item.id, newItemId);
+      state.items.push({ ...structuredClone(item), id: newItemId, storeId: id, barcode: item.barcode || item.sku || item.id });
+    });
+    state.promotions.filter((promo) => promo.storeId === sourceStoreId).forEach((promo) => {
+      state.promotions.push({ ...structuredClone(promo), id: uid("promo"), storeId: id, itemId: itemIds.get(promo.itemId) || promo.itemId });
+    });
+    state.registers.push({ id: `${id}-main`, name: "Main Register", storeId: id });
     state.selectedStoreId = id;
+    state.selectedRegisterId = `${id}-main`;
     state.activeCategory = "All";
     state.cart = [];
     elements.storeForm.reset();
