@@ -55,7 +55,6 @@
           <button class="tab-button" type="button" data-view="reports" data-modes="back-office" title="Sales reports">Sales Reports <span>›</span></button>
           <button class="tab-button" type="button" data-view="orders" data-modes="register back-office" title="Orders">Orders <span>›</span></button>
           <button class="tab-button" type="button" data-view="items" data-modes="back-office" title="Inventory">Inventory <span>›</span></button>
-          <button class="tab-button" type="button" data-view="promotions" data-modes="back-office" title="Discounts and coupons">Discounts &amp; Coupons <span>›</span></button>
           <button class="tab-button" type="button" data-view="settings" data-modes="back-office" title="Settings">Configuration <span>›</span></button>
         </nav>
 
@@ -81,7 +80,7 @@
           </header>
 
           <div class="dashboard-grid">
-            <article class="metric-tile">
+            <article class="metric-tile unused-manager-control">
               <span>Sales</span>
               <strong id="todaySales">$0.00</strong>
             </article>
@@ -120,10 +119,6 @@
                 <button class="action-button" type="button" data-jump-items>
                   <strong>Inventory</strong>
                   <span>Add products and counts</span>
-                </button>
-                <button class="action-button" type="button" data-jump-promotions>
-                  <strong>Promotions</strong>
-                  <span>Automatic discounts</span>
                 </button>
                 <button class="action-button" type="button" data-jump-orders>
                   <strong>Review Orders</strong>
@@ -350,16 +345,13 @@
           </header>
           <form class="item-form" id="itemForm">
             <input id="itemEditId" type="hidden" />
-            <input id="itemNameInput" type="text" placeholder="Item name" required />
-            <input id="itemCategoryInput" type="text" placeholder="Category" required />
-            <input id="itemPriceInput" type="number" min="0" step="0.01" placeholder="Price" required />
-            <input id="itemCostInput" type="number" min="0" step="0.01" placeholder="Cost" />
-            <input id="itemStockInput" type="number" min="0" step="1" placeholder="Stock" />
-            <input id="itemBarcodeInput" type="text" placeholder="Barcode / SKU" />
-            <label class="toggle-line compact">
-              <input id="itemTenderInput" type="checkbox" />
-              <span>Tender item</span>
-            </label>
+            <label><span>Item name</span><input id="itemNameInput" type="text" placeholder="Example: Chicken Box" required /></label>
+            <label><span>Category</span><input id="itemCategoryInput" type="text" placeholder="Example: Combos" required /></label>
+            <label><span>Price</span><input id="itemPriceInput" type="number" min="0" step="0.01" placeholder="0.00" required /></label>
+            <label><span>Barcode / SKU</span><input id="itemBarcodeInput" type="text" placeholder="Optional" /></label>
+            <input id="itemCostInput" type="hidden" value="0" />
+            <input id="itemStockInput" type="hidden" value="0" />
+            <input id="itemTenderInput" type="checkbox" hidden />
             <button class="primary-button" id="itemSubmitButton" type="submit">Add item</button>
             <button class="secondary-button" id="cancelItemEditButton" type="button" hidden>Cancel edit</button>
           </form>
@@ -431,11 +423,11 @@
             </label>
             <label><span>Receipt address</span><input id="settingsReceiptAddress" type="text" placeholder="Street, City, State ZIP" /></label>
             <label><span>Receipt phone</span><input id="settingsReceiptPhone" type="tel" placeholder="(555) 555-5555" /></label>
-            <label class="toggle-line compact"><input id="settingsCouponEnabled" type="checkbox" checked /><span>Enable receipt coupons</span></label>
-            <label><span>Coupon percent off</span><input id="settingsCouponPercent" type="number" min="0" max="100" step="0.01" value="10" /></label>
-            <label><span>Coupon message</span><input id="settingsCouponMessage" type="text" placeholder="Get {percent}% off on your next visit" /></label>
-            <label><span>Coupon wait hours</span><input id="settingsCouponDelay" type="number" min="0" step="1" value="24" /></label>
-            <label><span>Coupon valid days</span><input id="settingsCouponValidity" type="number" min="1" step="1" value="7" /></label>
+            <label class="toggle-line compact coupon-setting"><input id="settingsCouponEnabled" type="checkbox" checked /><span>Enable receipt coupons</span></label>
+            <label class="coupon-setting"><span>Coupon percent off</span><input id="settingsCouponPercent" type="number" min="0" max="100" step="0.01" value="10" /></label>
+            <label class="coupon-setting"><span>Coupon message</span><input id="settingsCouponMessage" type="text" placeholder="Get {percent}% off on your next visit" /></label>
+            <label class="coupon-setting"><span>Coupon wait hours</span><input id="settingsCouponDelay" type="number" min="0" step="1" value="24" /></label>
+            <label class="coupon-setting"><span>Coupon valid days</span><input id="settingsCouponValidity" type="number" min="1" step="1" value="7" /></label>
             <button class="primary-button" type="submit">Save settings</button>
           </form>
           </section>

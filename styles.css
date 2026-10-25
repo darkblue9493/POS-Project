@@ -1425,8 +1425,30 @@ th {
 }
 
 .item-form {
-  grid-template-columns: 1.3fr 1fr 110px 110px 110px 150px 130px 120px;
+  grid-template-columns: minmax(210px, 1.4fr) minmax(170px, 1fr) minmax(130px, .65fr) minmax(190px, 1.1fr) auto auto;
   align-items: end;
+}
+
+.item-form > label {
+  display: grid;
+  gap: 6px;
+}
+
+.item-form > label > span {
+  color: var(--muted);
+  font-size: .78rem;
+  font-weight: 800;
+}
+
+body[data-app-mode="back-office"] #itemsView > .item-list {
+  max-height: 48vh;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.unused-manager-control,
+.coupon-setting {
+  display: none !important;
 }
 
 .promo-form {
