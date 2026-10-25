@@ -305,7 +305,7 @@ async function handleApi(req, res, url) {
       "content-type": "application/json; charset=utf-8",
       "set-cookie": `pos_session=${encodeURIComponent(token)}; HttpOnly; SameSite=Lax; Path=/; Max-Age=${sessionCookieMaxAgeSeconds}`
     });
-    res.end(JSON.stringify({ ok: true, storeId: loginStore?.id || null, cashierName: loginUser?.name || "Cashier 1" }));
+    res.end(JSON.stringify({ ok: true, storeId: loginStore?.id || null, cashierName: loginUser?.name || "Cashier 1", state: db }));
     return;
   }
 

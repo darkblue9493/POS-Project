@@ -181,6 +181,7 @@
     settingsTaxRate: document.getElementById("settingsTaxRate"),
     settingsReceiptFooter: document.getElementById("settingsReceiptFooter"),
     settingsReceiptHeader: document.getElementById("settingsReceiptHeader"),
+    configurationStoreName: document.getElementById("configurationStoreName"),
     userForm: document.getElementById("userForm"),
     newUserNameInput: document.getElementById("newUserNameInput"),
     newUserPinInput: document.getElementById("newUserPinInput"),
@@ -335,10 +336,10 @@
     return data;
   }
 
-  async function loadRemoteState(preferredStoreId = "", preferredCashierName = "") {
+  async function loadRemoteState(preferredStoreId = "", preferredCashierName = "", initialData = null) {
     if (!remoteMode) return;
     try {
-      const data = await api("/api/state");
+      const data = initialData || await api("/api/state");
       state = {
         ...state,
         ...data.state,
@@ -464,6 +465,7 @@
     elements.settingsTaxRate.value = selectedStore.taxRate ?? state.settings.taxRate;
     elements.settingsReceiptFooter.value = selectedStore.receiptFooter ?? state.settings.receiptFooter;
     elements.settingsReceiptHeader.value = selectedStore.receiptHeader ?? selectedStore.name;
+    if (elements.configurationStoreName) elements.configurationStoreName.textContent = selectedStore.name;
     renderCategories();
     renderStoreSelect();
     renderStoreList();
@@ -581,13 +583,33 @@
           <div class="line-meta">Cashiers: ${cashiers.length ? escapeHtml(cashiers.map((user) => user.name).join(", ")) : "None yet"}</div>
         </div>
         <a class="secondary-button link-button" href="${getStoreRegisterLink(store)}">Open</a>
+        <button class="secondary-button" type="button" data-action="edit">Edit</button>
         <button class="secondary-button" type="button" data-action="pin">Change PIN</button>
         <button class="secondary-button danger-button" type="button" data-action="delete">Delete</button>
       `;
+      row.querySelector('[data-action="edit"]').addEventListener("click", () => editStore(store.id));
       row.querySelector('[data-action="pin"]').addEventListener("click", () => changeStorePin(store.id));
       row.querySelector('[data-action="delete"]').addEventListener("click", () => deleteStore(store.id));
       elements.storeList.appendChild(row);
     });
+  }
+
+  async function editStore(storeId) {
+    const store = state.stores.find((candidate) => candidate.id === storeId);
+    if (!store) return;
+    const name = window.prompt("Store name", store.name);
+    if (name === null) return;
+    const trimmedName = name.trim();
+    if (!trimmedName) {
+      window.alert("Store name is required.");
+      return;
+    }
+    const address = window.prompt("Store address", store.address || "");
+    if (address === null) return;
+    store.name = trimmedName;
+    store.address = address.trim();
+    render();
+    await persistNow();
   }
 
   function changeStorePin(storeId) {
@@ -602,6 +624,7 @@
     if (!newPin) return;
     store.pin = String(newPin);
     render();
+    persistNow();
   }
 
   function deleteStore(storeId) {
@@ -626,6 +649,7 @@
       state.cart = [];
     }
     render();
+    persistNow();
   }
 
   function renderRegisterControls() {
@@ -639,7 +663,7 @@
     });
 
     elements.registerList.innerHTML = "";
-    state.registers.forEach((register) => {
+    state.registers.filter((register) => register.storeId === state.selectedStoreId).forEach((register) => {
       const store = state.stores.find((candidate) => candidate.id === register.storeId);
       const url = `register.html?register=${encodeURIComponent(register.id)}`;
       const row = document.createElement("div");
@@ -651,14 +675,22 @@
         </div>
         <span>${escapeHtml(register.id)}</span>
         <a class="secondary-button link-button" href="${url}">Open</a>
-        <button class="secondary-button" type="button">Remove</button>
+        <button class="secondary-button" type="button" data-action="edit">Edit</button>
+        <button class="secondary-button danger-button" type="button" data-action="remove">Remove</button>
       `;
-      row.querySelector("button").addEventListener("click", () => {
-        state.registers = state.registers.filter((candidate) => candidate.id !== register.id);
-        if (!state.registers.length) {
-          state.registers = structuredClone(defaultState.registers);
-        }
+      row.querySelector('[data-action="edit"]').addEventListener("click", () => {
+        const name = window.prompt("Register terminal name", register.name);
+        if (!name?.trim()) return;
+        register.name = name.trim();
         render();
+        persistNow();
+      });
+      row.querySelector('[data-action="remove"]').addEventListener("click", () => {
+        if (!window.confirm(`Remove ${register.name}?`)) return;
+        state.registers = state.registers.filter((candidate) => candidate.id !== register.id);
+        if (!state.registers.some((candidate) => candidate.storeId === state.selectedStoreId)) state.registers.push({ id: `${state.selectedStoreId}-main`, name: "Main Register", storeId: state.selectedStoreId });
+        render();
+        persistNow();
       });
       elements.registerList.appendChild(row);
     });
@@ -673,6 +705,7 @@
       option.selected = store.id === state.selectedStoreId;
       elements.newUserStoreSelect.appendChild(option);
     });
+    elements.newUserStoreSelect.value = state.selectedStoreId;
     elements.userList.innerHTML = "";
     const users = state.users.filter((user) => user.storeId === state.selectedStoreId);
     if (!users.length) {
@@ -685,11 +718,13 @@
     users.forEach((user) => {
       const row = document.createElement("div");
       row.className = "item-list-row";
-      row.innerHTML = `<div><strong>${escapeHtml(user.name)}</strong><div class="line-meta">Cashier access for this store</div></div><span>PIN protected</span><button class="secondary-button" type="button" data-action="reset">Reset PIN</button><button class="secondary-button danger-button" type="button" data-action="remove">Remove</button>`;
+      row.innerHTML = `<div><strong>${escapeHtml(user.name)}</strong><div class="line-meta">Cashier access for this store</div></div><span>PIN protected</span><button class="secondary-button" type="button" data-action="edit">Edit</button><button class="secondary-button" type="button" data-action="reset">Reset PIN</button><button class="secondary-button danger-button" type="button" data-action="remove">Remove</button>`;
+      row.querySelector('[data-action="edit"]').addEventListener("click", () => editUser(user.id));
       row.querySelector('[data-action="reset"]').addEventListener("click", () => resetUserPin(user.id));
       row.querySelector('[data-action="remove"]').addEventListener("click", () => {
         state.users = state.users.filter((candidate) => candidate.id !== user.id);
         render();
+        persistNow();
       });
       elements.userList.appendChild(row);
     });
@@ -706,6 +741,20 @@
       return;
     }
     user.pin = pin;
+    render();
+    await persistNow();
+  }
+
+  async function editUser(userId) {
+    const user = state.users.find((candidate) => candidate.id === userId);
+    if (!user) return;
+    const name = window.prompt("Cashier name", user.name);
+    if (name === null) return;
+    if (!name.trim()) {
+      window.alert("Cashier name is required.");
+      return;
+    }
+    user.name = name.trim();
     render();
     await persistNow();
   }
@@ -1453,7 +1502,7 @@
         location.assign("./back-office.html");
         return;
       }
-      await loadRemoteState(login.storeId || "", login.cashierName || "");
+      await loadRemoteState(login.storeId || "", login.cashierName || "", login.state ? { state: login.state, session: login } : null);
     } catch (error) {
       elements.loginMessage.textContent = error.message;
     }

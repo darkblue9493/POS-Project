@@ -6,6 +6,8 @@
     <title>Vedrix POS</title>
     <meta name="theme-color" content="#16241d" />
     <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="preload" href="./styles.css" as="style" />
+    <link rel="preload" href="./app.js" as="script" />
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
@@ -384,10 +386,13 @@
         <section class="view" id="settingsView">
           <header class="workspace-header">
             <div>
-              <p class="eyebrow">Store</p>
-              <h2>Settings</h2>
+              <p class="eyebrow">Configuration</p>
+              <h2>Control center</h2>
+              <p class="configuration-description">Manage the selected store below. Store creation and deletion stay available for your whole organization.</p>
             </div>
           </header>
+          <section class="configuration-group">
+            <div class="configuration-group-heading"><span>Selected store</span><strong id="configurationStoreName"></strong></div>
           <form class="settings-form" id="settingsForm">
             <label>
               <span>Store name</span>
@@ -407,6 +412,9 @@
             </label>
             <button class="primary-button" type="submit">Save settings</button>
           </form>
+          </section>
+          <section class="configuration-group">
+            <div class="configuration-group-heading"><span>Organization stores</span><p>Create, open, edit, secure, or permanently delete a store.</p></div>
           <form class="settings-form" id="storeForm">
             <label>
               <span>New store name</span>
@@ -423,6 +431,9 @@
             <button class="primary-button" type="submit">Create store</button>
           </form>
           <div class="item-list" id="storeList"></div>
+          </section>
+          <section class="configuration-group">
+            <div class="configuration-group-heading"><span>Cashier access for selected store</span><p>Cashiers created here sign into the store currently selected in the manager.</p></div>
           <form class="settings-form" id="userForm">
             <h3>Cashier access</h3>
             <label>
@@ -435,23 +446,27 @@
             </label>
             <label>
               <span>Store</span>
-              <select id="newUserStoreSelect"></select>
+              <select id="newUserStoreSelect" disabled></select>
             </label>
             <button class="primary-button" type="submit">Add cashier</button>
           </form>
           <div class="item-list" id="userList"></div>
-          <form class="settings-form is-hidden" id="registerForm">
+          </section>
+          <section class="configuration-group">
+            <div class="configuration-group-heading"><span>Register terminals for selected store</span><p>Create and manage the terminals used at this location.</p></div>
+          <form class="settings-form" id="registerForm">
             <label>
               <span>Register name</span>
               <input id="newRegisterNameInput" type="text" placeholder="Atlanta Front Register" />
             </label>
             <label>
               <span>Store</span>
-              <select id="newRegisterStoreSelect"></select>
+              <select id="newRegisterStoreSelect" disabled></select>
             </label>
             <button class="primary-button" type="submit">Create register</button>
           </form>
-          <div class="item-list is-hidden" id="registerList"></div>
+          <div class="item-list" id="registerList"></div>
+          </section>
         </section>
       </main>
     </div>

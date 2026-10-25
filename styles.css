@@ -260,6 +260,37 @@ body[data-app-mode="back-office"] .primary-button {
   justify-content: flex-end;
 }
 
+.configuration-group {
+  margin: 0 0 24px;
+}
+
+.configuration-group-heading {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+  margin: 0 0 10px;
+  color: #1d3043;
+}
+
+.configuration-group-heading > span {
+  font-size: 1rem;
+  font-weight: 850;
+}
+
+.configuration-group-heading strong {
+  color: #d24435;
+  font-size: 1.05rem;
+}
+
+.configuration-group-heading p,
+.configuration-description {
+  margin: 0;
+  color: #617386;
+  font-size: .9rem;
+  font-weight: 550;
+}
+
 .login-screen {
   position: fixed;
   inset: 0;
