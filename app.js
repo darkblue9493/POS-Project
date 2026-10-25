@@ -167,6 +167,7 @@
     itemSubmitButton: document.getElementById("itemSubmitButton"),
     cancelItemEditButton: document.getElementById("cancelItemEditButton"),
     itemList: document.getElementById("itemList"),
+    menuLayoutList: document.getElementById("menuLayoutList"),
     settingsForm: document.getElementById("settingsForm"),
     storeForm: document.getElementById("storeForm"),
     newStoreNameInput: document.getElementById("newStoreNameInput"),
@@ -418,7 +419,25 @@
   }
 
   function getCategories() {
-    return ["All", ...Array.from(new Set(state.items.filter((item) => item.storeId === state.selectedStoreId).map((item) => item.category)))];
+    return ["All", ...Array.from(new Set(getStoreItems().map((item) => item.category)))];
+  }
+
+  function getStoreItems() {
+    return state.items
+      .filter((item) => item.storeId === state.selectedStoreId)
+      .sort((first, second) => itemMenuPosition(first) - itemMenuPosition(second));
+  }
+
+  function itemMenuPosition(item) {
+    const position = Number(item.menuPosition);
+    return Number.isFinite(position) && position > 0 ? position : state.items.indexOf(item) + 1;
+  }
+
+  function normalizeMenuPositions(storeId = state.selectedStoreId) {
+    state.items
+      .filter((item) => item.storeId === storeId)
+      .sort((first, second) => itemMenuPosition(first) - itemMenuPosition(second))
+      .forEach((item, index) => { item.menuPosition = index + 1; });
   }
 
   function getCartTotals() {
@@ -952,8 +971,7 @@
 
   function renderMenu() {
     const query = elements.itemSearch.value.trim().toLowerCase();
-    const filtered = state.items.filter((item) => {
-      if (item.storeId !== state.selectedStoreId) return false;
+    const filtered = getStoreItems().filter((item) => {
       const matchesCategory = state.activeCategory === "All" || item.category === state.activeCategory;
       const matchesSearch = !query || item.name.toLowerCase().includes(query) || item.category.toLowerCase().includes(query);
       return matchesCategory && matchesSearch;
@@ -1195,7 +1213,7 @@
 
   function renderItems() {
     elements.itemList.innerHTML = "";
-    state.items.filter((item) => item.storeId === state.selectedStoreId).forEach((item) => {
+    getStoreItems().forEach((item) => {
       const row = document.createElement("div");
       row.className = "item-list-row";
       row.innerHTML = `
@@ -1219,6 +1237,36 @@
       });
       elements.itemList.appendChild(row);
     });
+    renderMenuLayout();
+  }
+
+  function renderMenuLayout() {
+    if (!elements.menuLayoutList) return;
+    const items = getStoreItems();
+    elements.menuLayoutList.innerHTML = "";
+    items.forEach((item, index) => {
+      const row = document.createElement("div");
+      row.className = "item-list-row menu-layout-row";
+      row.innerHTML = `<div><strong>${index + 1}. ${escapeHtml(item.name)}</strong><div class="line-meta">${escapeHtml(item.category)} · ${price(item.price)}</div></div><div class="item-row-actions"><button class="secondary-button" type="button" data-action="up" ${index === 0 ? "disabled" : ""}>↑ Up</button><button class="secondary-button" type="button" data-action="down" ${index === items.length - 1 ? "disabled" : ""}>↓ Down</button></div>`;
+      row.querySelector('[data-action="up"]').addEventListener("click", () => moveMenuItem(item.id, -1));
+      row.querySelector('[data-action="down"]').addEventListener("click", () => moveMenuItem(item.id, 1));
+      elements.menuLayoutList.appendChild(row);
+    });
+  }
+
+  async function moveMenuItem(itemId, direction) {
+    normalizeMenuPositions();
+    const items = getStoreItems();
+    const index = items.findIndex((item) => item.id === itemId);
+    const other = items[index + direction];
+    if (index < 0 || !other) return;
+    const current = items[index];
+    const currentPosition = current.menuPosition;
+    current.menuPosition = other.menuPosition;
+    other.menuPosition = currentPosition;
+    normalizeMenuPositions();
+    render();
+    await persistNow();
   }
 
   function startItemEdit(item) {
@@ -1518,6 +1566,7 @@
       price: Number(elements.itemPriceInput.value),
       cost: Number(elements.itemCostInput.value) || 0,
       stock: Number(elements.itemStockInput.value) || 0,
+      menuPosition: itemId ? (state.items.find((candidate) => candidate.id === itemId)?.menuPosition || 0) : getStoreItems().length + 1,
       storeId: state.selectedStoreId,
       barcode: elements.itemBarcodeInput.value.trim(),
       tender: elements.itemTenderInput.checked,

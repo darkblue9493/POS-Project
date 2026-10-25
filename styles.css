@@ -291,6 +291,20 @@ body[data-app-mode="back-office"] .primary-button {
   font-weight: 550;
 }
 
+.menu-layout-panel {
+  margin-top: 24px;
+  padding: 20px;
+  border: 1px solid #d7e0e8;
+  border-top: 4px solid #12a765;
+  border-radius: 6px;
+  background: #fff;
+  box-shadow: 0 5px 18px rgba(44, 60, 77, .07);
+}
+
+.menu-layout-row {
+  align-items: center;
+}
+
 .login-screen {
   position: fixed;
   inset: 0;
