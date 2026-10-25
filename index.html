@@ -398,6 +398,7 @@
           </header>
           <div class="configuration-tabs" role="tablist" aria-label="Configuration sections">
             <button class="configuration-tab active" type="button" data-configuration="store">Store &amp; receipts</button>
+            <button class="configuration-tab" type="button" data-configuration="coupons">Coupons</button>
             <button class="configuration-tab" type="button" data-configuration="organization">Stores</button>
             <button class="configuration-tab" type="button" data-configuration="cashiers">Cashiers</button>
             <button class="configuration-tab" type="button" data-configuration="terminals">Terminals</button>
@@ -423,13 +424,19 @@
             </label>
             <label><span>Receipt address</span><input id="settingsReceiptAddress" type="text" placeholder="Street, City, State ZIP" /></label>
             <label><span>Receipt phone</span><input id="settingsReceiptPhone" type="tel" placeholder="(555) 555-5555" /></label>
-            <label class="toggle-line compact coupon-setting"><input id="settingsCouponEnabled" type="checkbox" checked /><span>Enable receipt coupons</span></label>
-            <label class="coupon-setting"><span>Coupon percent off</span><input id="settingsCouponPercent" type="number" min="0" max="100" step="0.01" value="10" /></label>
-            <label class="coupon-setting"><span>Coupon message</span><input id="settingsCouponMessage" type="text" placeholder="Get {percent}% off on your next visit" /></label>
-            <label class="coupon-setting"><span>Coupon wait hours</span><input id="settingsCouponDelay" type="number" min="0" step="1" value="24" /></label>
-            <label class="coupon-setting"><span>Coupon valid days</span><input id="settingsCouponValidity" type="number" min="1" step="1" value="7" /></label>
             <button class="primary-button" type="submit">Save settings</button>
           </form>
+          </section>
+          <section class="configuration-group" data-configuration-panel="coupons" hidden>
+            <div class="configuration-group-heading"><span>Receipt coupons</span><p>Choose whether to print coupons and set their offer and validity.</p></div>
+            <div class="settings-form">
+              <label class="toggle-line compact"><input id="settingsCouponEnabled" type="checkbox" checked form="settingsForm" /><span>Enable receipt coupons</span></label>
+              <label><span>Percent off</span><input id="settingsCouponPercent" type="number" min="0" max="100" step="0.01" value="10" form="settingsForm" /></label>
+              <label><span>Coupon message</span><input id="settingsCouponMessage" type="text" placeholder="Get {percent}% off on your next visit" form="settingsForm" /></label>
+              <label><span>Available after hours</span><input id="settingsCouponDelay" type="number" min="0" step="1" value="24" form="settingsForm" /></label>
+              <label><span>Expires after days</span><input id="settingsCouponValidity" type="number" min="1" step="1" value="7" form="settingsForm" /></label>
+              <button class="primary-button" type="submit" form="settingsForm">Save coupon settings</button>
+            </div>
           </section>
           <section class="configuration-group" data-configuration-panel="organization" hidden>
             <div class="configuration-group-heading"><span>Organization stores</span><p>Create, open, edit, secure, or permanently delete a store.</p></div>

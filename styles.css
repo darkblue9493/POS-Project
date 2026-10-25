@@ -1499,8 +1499,7 @@ body[data-app-mode="back-office"] #itemsView > .item-list {
   .pos-layout-preview .pos-menu-item { min-height: 92px; font-size: .86rem; }
 }
 
-.unused-manager-control,
-.coupon-setting {
+.unused-manager-control {
   display: none !important;
 }
 
