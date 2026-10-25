@@ -317,6 +317,12 @@
     }
   }
 
+  async function persistNow() {
+    if (!remoteMode || !hydrated) return;
+    clearTimeout(saveTimer);
+    await saveRemoteState();
+  }
+
   function uid(prefix) {
     return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
   }
@@ -1239,7 +1245,7 @@
     render();
   });
 
-  elements.settingsForm.addEventListener("submit", (event) => {
+  elements.settingsForm.addEventListener("submit", async (event) => {
     event.preventDefault();
     const selectedStore = getSelectedStore();
     selectedStore.name = elements.settingsStoreName.value.trim() || selectedStore.name;
@@ -1250,9 +1256,10 @@
     state.settings.taxRate = selectedStore.taxRate;
     state.settings.receiptFooter = selectedStore.receiptFooter;
     render();
+    await persistNow();
   });
 
-  elements.userForm.addEventListener("submit", (event) => {
+  elements.userForm.addEventListener("submit", async (event) => {
     event.preventDefault();
     const name = elements.newUserNameInput.value.trim();
     const pin = elements.newUserPinInput.value.trim();
@@ -1266,9 +1273,10 @@
     state.users.push({ id: uid("user"), name, pin, storeId, role: "cashier" });
     elements.userForm.reset();
     render();
+    await persistNow();
   });
 
-  elements.storeForm.addEventListener("submit", (event) => {
+  elements.storeForm.addEventListener("submit", async (event) => {
     event.preventDefault();
     const name = elements.newStoreNameInput.value.trim();
     if (!name) return;
@@ -1280,6 +1288,7 @@
     state.cart = [];
     elements.storeForm.reset();
     render();
+    await persistNow();
   });
 
   elements.registerForm.addEventListener("submit", (event) => {
