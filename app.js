@@ -94,6 +94,18 @@
     inventoryCount: document.getElementById("inventoryCount"),
     activePromoCount: document.getElementById("activePromoCount"),
     recentOrders: document.getElementById("recentOrders"),
+    reportRange: document.getElementById("reportRange"),
+    reportCaption: document.getElementById("reportCaption"),
+    reportGrossSales: document.getElementById("reportGrossSales"),
+    reportDiscounts: document.getElementById("reportDiscounts"),
+    reportTax: document.getElementById("reportTax"),
+    reportTicketCount: document.getElementById("reportTicketCount"),
+    reportAverageTicket: document.getElementById("reportAverageTicket"),
+    reportItemsSold: document.getElementById("reportItemsSold"),
+    paymentReport: document.getElementById("paymentReport"),
+    bestSellerReport: document.getElementById("bestSellerReport"),
+    lowStockReport: document.getElementById("lowStockReport"),
+    exportReportButton: document.getElementById("exportReportButton"),
     loginScreen: document.getElementById("loginScreen"),
     loginForm: document.getElementById("loginForm"),
     pinInput: document.getElementById("pinInput"),
@@ -175,7 +187,7 @@
   }
 
   function getAllowedViews() {
-    return appMode === "back-office" ? ["dashboard", "orders", "items", "promotions", "settings"] : ["register", "orders"];
+    return appMode === "back-office" ? ["dashboard", "reports", "orders", "items", "promotions", "settings"] : ["register", "orders"];
   }
 
   function applyAppMode() {
@@ -348,6 +360,7 @@
     renderItems();
     renderPromotions();
     renderDashboard();
+    renderReports();
     saveState();
   }
 
@@ -509,6 +522,69 @@
     return state.orders.filter((order) => new Date(order.createdAt).toDateString() === today && (order.storeId || state.selectedStoreId) === state.selectedStoreId);
   }
 
+  function getReportOrders() {
+    const range = elements.reportRange ? elements.reportRange.value : "today";
+    const orders = state.orders.filter((order) => (order.storeId || state.selectedStoreId) === state.selectedStoreId);
+    if (range === "all") return orders;
+    const now = new Date();
+    if (range === "today") return orders.filter((order) => new Date(order.createdAt).toDateString() === now.toDateString());
+    const cutoff = new Date(now);
+    cutoff.setHours(0, 0, 0, 0);
+    cutoff.setDate(cutoff.getDate() - (Number(range) - 1));
+    return orders.filter((order) => new Date(order.createdAt) >= cutoff);
+  }
+
+  function renderReportRows(container, rows, emptyText) {
+    container.innerHTML = "";
+    if (!rows.length) {
+      const empty = document.createElement("div");
+      empty.className = "empty-state report-empty";
+      empty.textContent = emptyText;
+      container.appendChild(empty);
+      return;
+    }
+    rows.forEach((rowData) => {
+      const row = document.createElement("div");
+      row.className = "report-row";
+      row.innerHTML = `<div><strong>${escapeHtml(rowData.label)}</strong><span>${escapeHtml(rowData.detail)}</span></div><strong>${escapeHtml(rowData.value)}</strong>`;
+      container.appendChild(row);
+    });
+  }
+
+  function renderReports() {
+    if (!elements.reportRange) return;
+    const orders = getReportOrders();
+    const totals = orders.reduce((summary, order) => {
+      summary.gross += Number(order.totals?.subtotal || 0);
+      summary.discount += Number(order.totals?.discount || 0);
+      summary.tax += Number(order.totals?.tax || 0);
+      summary.sales += Number(order.totals?.total || 0);
+      (order.items || []).forEach((item) => {
+        summary.items += Number(item.qty || 0);
+        const existing = summary.bestSellers.get(item.name) || { qty: 0, sales: 0 };
+        existing.qty += Number(item.qty || 0);
+        existing.sales += Number(item.price || 0) * Number(item.qty || 0);
+        summary.bestSellers.set(item.name, existing);
+      });
+      summary.payments[order.payment || "Other"] = (summary.payments[order.payment || "Other"] || 0) + Number(order.totals?.total || 0);
+      return summary;
+    }, { gross: 0, discount: 0, tax: 0, sales: 0, items: 0, payments: {}, bestSellers: new Map() });
+    const rangeLabels = { today: "today", 7: "the last 7 days", 30: "the last 30 days", all: "all time" };
+    elements.reportCaption.textContent = `${orders.length} completed ticket${orders.length === 1 ? "" : "s"} for ${rangeLabels[elements.reportRange.value]}.`;
+    elements.reportGrossSales.textContent = price(totals.sales);
+    elements.reportDiscounts.textContent = price(totals.discount);
+    elements.reportTax.textContent = price(totals.tax);
+    elements.reportTicketCount.textContent = String(orders.length);
+    elements.reportAverageTicket.textContent = price(orders.length ? totals.sales / orders.length : 0);
+    elements.reportItemsSold.textContent = String(totals.items);
+    const payments = Object.entries(totals.payments).sort((a, b) => b[1] - a[1]).map(([method, total]) => ({ label: method, detail: "Tender collected", value: price(total) }));
+    renderReportRows(elements.paymentReport, payments, "No payments in this period");
+    const sellers = [...totals.bestSellers.entries()].sort((a, b) => b[1].qty - a[1].qty || b[1].sales - a[1].sales).slice(0, 8).map(([name, item]) => ({ label: name, detail: `${item.qty} sold`, value: price(item.sales) }));
+    renderReportRows(elements.bestSellerReport, sellers, "No items sold in this period");
+    const lowStock = state.items.filter((item) => item.storeId === state.selectedStoreId && Number(item.stock) <= 5).sort((a, b) => Number(a.stock) - Number(b.stock)).slice(0, 8).map((item) => ({ label: item.name, detail: item.category, value: `${Number(item.stock) || 0} left` }));
+    renderReportRows(elements.lowStockReport, lowStock, "No low-stock items");
+  }
+
   function renderDashboard() {
     const orders = getTodaysOrders();
     const total = orders.reduce((sum, order) => sum + Number(order.totals.total || 0), 0);
@@ -576,7 +652,7 @@
     elements.menuGrid.innerHTML = "";
     filtered.forEach((item) => {
       const button = document.createElement("button");
-      button.className = "menu-item";
+      button.className = `menu-item pos-menu-item ${categoryChipClass(item.category)}`;
       button.type = "button";
       button.innerHTML = `
           <div class="item-chip ${categoryChipClass(item.category)}">${item.name.slice(0, 2).toUpperCase()}</div>
@@ -707,6 +783,10 @@
     render();
   }
 
+  function getMostRecentOrder() {
+    return state.orders.find((order) => (order.storeId || state.selectedStoreId) === state.selectedStoreId);
+  }
+
   function showReceipt(order) {
     const selectedStore = getSelectedStore();
     elements.receiptContent.innerHTML = `
@@ -827,9 +907,9 @@
     });
   }
 
-  function exportOrders() {
+  function exportOrders(orders = state.orders, filename = "pos-orders.csv") {
     const header = ["order", "customer", "type", "source", "payment", "subtotal", "discount", "tax", "total", "note", "created_at"];
-    const rows = state.orders.map((order) => [
+    const rows = orders.map((order) => [
       order.id,
       order.customer,
       order.orderType,
@@ -846,7 +926,7 @@
     const blob = new Blob([csv], { type: "text/csv" });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
-    link.download = "pos-orders.csv";
+    link.download = filename;
     link.click();
     URL.revokeObjectURL(link.href);
   }
@@ -890,6 +970,7 @@
   document.querySelectorAll("[data-jump-items]").forEach((button) => button.addEventListener("click", () => setView("items")));
   document.querySelectorAll("[data-jump-promotions]").forEach((button) => button.addEventListener("click", () => setView("promotions")));
   document.querySelectorAll("[data-jump-orders]").forEach((button) => button.addEventListener("click", () => setView("orders")));
+  document.querySelectorAll("[data-jump-reports]").forEach((button) => button.addEventListener("click", () => setView("reports")));
   elements.orderTypeButtons.forEach((button) => {
     button.addEventListener("click", () => {
       state.orderType = button.dataset.orderType;
@@ -918,9 +999,61 @@
     renderCart();
     saveState();
   });
-  elements.exportOrdersButton.addEventListener("click", exportOrders);
+  elements.exportOrdersButton.addEventListener("click", () => exportOrders());
+  elements.reportRange.addEventListener("change", renderReports);
+  elements.exportReportButton.addEventListener("click", () => exportOrders(getReportOrders(), `pos-sales-${elements.reportRange.value}.csv`));
   elements.printReceiptButton.addEventListener("click", () => window.print());
   elements.closeReceiptButton.addEventListener("click", () => elements.receiptDialog.close());
+  document.querySelectorAll("[data-pay-ticket]").forEach((button) => button.addEventListener("click", completeOrder));
+  document.querySelectorAll("[data-focus-customer]").forEach((button) => button.addEventListener("click", () => elements.customerName.focus()));
+  document.querySelectorAll("[data-void-line]").forEach((button) => button.addEventListener("click", () => {
+    state.cart.pop();
+    renderCart();
+    saveState();
+  }));
+  document.querySelectorAll("[data-start-over]").forEach((button) => button.addEventListener("click", () => {
+    state.cart = [];
+    elements.customerName.value = "";
+    elements.ticketNote.value = "";
+    renderCart();
+    saveState();
+  }));
+  document.querySelectorAll("[data-show-last-receipt], [data-reprint-last]").forEach((button) => button.addEventListener("click", () => {
+    const order = getMostRecentOrder();
+    if (order) showReceipt(order);
+  }));
+  document.querySelectorAll("[data-toggle-discount]").forEach((button) => button.addEventListener("click", () => {
+    elements.bogoToggle.checked = !elements.bogoToggle.checked;
+    renderCart();
+    saveState();
+  }));
+  document.addEventListener("keydown", (event) => {
+    if (appMode !== "register" || elements.loginScreen.hidden === false) return;
+    const target = event.target;
+    const isTyping = target instanceof HTMLInputElement || target instanceof HTMLSelectElement || target instanceof HTMLTextAreaElement;
+    if (event.key === "F2") {
+      event.preventDefault();
+      completeOrder();
+      return;
+    }
+    if (event.key === "F4") {
+      event.preventDefault();
+      elements.barcodeScanInput.focus();
+      elements.barcodeScanInput.select();
+      return;
+    }
+    if (event.key === "Escape" && state.cart.length) {
+      event.preventDefault();
+      state.cart = [];
+      renderCart();
+      saveState();
+      return;
+    }
+    if (!isTyping && event.key === "/") {
+      event.preventDefault();
+      elements.itemSearch.focus();
+    }
+  });
   elements.loginForm.addEventListener("submit", async (event) => {
     event.preventDefault();
     elements.loginMessage.textContent = "Checking...";

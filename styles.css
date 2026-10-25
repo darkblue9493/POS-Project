@@ -222,6 +222,230 @@ h2 {
   align-items: start;
 }
 
+/* Dedicated counter layout for a touch-screen register. */
+body[data-app-mode="register"] {
+  background: #101010;
+}
+
+body[data-app-mode="register"] .app-shell {
+  display: block;
+  background: #101010;
+}
+
+body[data-app-mode="register"] .sidebar {
+  display: none;
+}
+
+body[data-app-mode="register"] .workspace {
+  padding: 8px;
+}
+
+body[data-app-mode="register"] .workspace-header {
+  min-height: 56px;
+  margin-bottom: 8px;
+  padding: 8px 14px;
+  color: #f4f4f4;
+  background: #050505;
+  border: 1px solid #343434;
+}
+
+body[data-app-mode="register"] .workspace-header .eyebrow {
+  color: #b7ff43;
+}
+
+body[data-app-mode="register"] .register-layout {
+  grid-template-columns: 320px 72px minmax(0, 1fr);
+  grid-template-areas: "cart actions menu";
+  gap: 7px;
+  min-height: calc(100vh - 80px);
+}
+
+body[data-app-mode="register"] .cart-panel {
+  grid-area: cart;
+  position: static;
+  display: flex;
+  flex-direction: column;
+  padding: 10px;
+  border: 1px solid #555;
+  border-radius: 0;
+  box-shadow: none;
+  background: #080808;
+  color: #e8e8e8;
+}
+
+body[data-app-mode="register"] .cart-panel .eyebrow,
+body[data-app-mode="register"] .cart-panel .line-meta,
+body[data-app-mode="register"] .cart-panel .summary span {
+  color: #a9ff43;
+}
+
+body[data-app-mode="register"] .cart-panel input,
+body[data-app-mode="register"] .cart-panel select {
+  min-height: 36px;
+  border-radius: 0;
+}
+
+body[data-app-mode="register"] .cart-items {
+  flex: 1;
+  min-height: 180px;
+  max-height: none;
+}
+
+body[data-app-mode="register"] .line-row,
+body[data-app-mode="register"] .empty-state {
+  border-radius: 0;
+  background: #f2f2f2;
+  color: #111;
+}
+
+body[data-app-mode="register"] .summary {
+  margin-top: auto;
+  border-top-color: #555;
+}
+
+body[data-app-mode="register"] .summary .total {
+  color: #a9ff43;
+}
+
+body[data-app-mode="register"] .menu-panel {
+  grid-area: menu;
+  position: relative;
+  height: calc(100vh - 80px);
+  min-height: 0;
+  overflow: hidden;
+  padding: 10px 100px 10px 10px;
+  border: 1px solid #555;
+  border-radius: 0;
+  box-shadow: none;
+  background: #161616;
+}
+
+body[data-app-mode="register"] .toolbar {
+  grid-template-columns: minmax(140px, 230px) minmax(140px, 230px);
+  margin-bottom: 8px;
+}
+
+body[data-app-mode="register"] .search-field span {
+  color: #eee;
+}
+
+body[data-app-mode="register"] .search-field input {
+  min-height: 36px;
+  border-radius: 0;
+}
+
+body[data-app-mode="register"] .category-strip {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  bottom: 10px;
+  width: 82px;
+  display: grid;
+  grid-auto-rows: minmax(48px, 1fr);
+  align-content: stretch;
+  overflow-y: auto;
+  overflow-x: hidden;
+  gap: 4px;
+}
+
+body[data-app-mode="register"] .category-button {
+  min-height: 48px;
+  white-space: normal;
+  border-radius: 0;
+  border-color: #5336c7;
+  background: linear-gradient(#5938e8, #3a1eb4);
+  color: #fff;
+  font-size: .72rem;
+  line-height: 1.05;
+  padding: 5px;
+}
+
+body[data-app-mode="register"] .category-button.active {
+  border-color: #fff;
+  background: linear-gradient(#59aef2, #1976bf);
+  color: #fff;
+}
+
+body[data-app-mode="register"] .menu-grid {
+  grid-template-columns: repeat(3, minmax(130px, 1fr));
+  gap: 4px;
+  max-height: calc(100vh - 160px);
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+body[data-app-mode="register"] .menu-item {
+  min-height: 92px;
+  border-radius: 0;
+  border: 1px solid #671000;
+  background: linear-gradient(#f83a21, #a70800);
+  color: #fff700;
+  text-align: center;
+  padding: 7px;
+  text-shadow: 1px 1px #480000;
+}
+
+body[data-app-mode="register"] .menu-item .item-chip,
+body[data-app-mode="register"] .menu-item span {
+  display: none;
+}
+
+body[data-app-mode="register"] .menu-item.chip-combos {
+  border-color: #7c6900;
+  background: linear-gradient(#fff94e, #e5bd00);
+  color: #272100;
+  text-shadow: none;
+}
+
+body[data-app-mode="register"] .menu-item.chip-sides {
+  border-color: #777;
+  background: linear-gradient(#fff, #d9d9d9);
+  color: #9d3030;
+  text-shadow: none;
+}
+
+body[data-app-mode="register"] .menu-item.chip-drinks {
+  border-color: #006773;
+  background: linear-gradient(#51d2dd, #008b98);
+  color: #fff;
+}
+
+.register-action-rail {
+  display: none;
+}
+
+body[data-app-mode="register"] .register-action-rail {
+  grid-area: actions;
+  display: grid;
+  grid-auto-rows: 1fr;
+  gap: 3px;
+  min-height: 0;
+}
+
+.pos-action {
+  display: grid;
+  place-items: center;
+  border: 1px solid #999;
+  border-radius: 0;
+  background: linear-gradient(#fff, #cfcfcf);
+  color: #222;
+  text-align: center;
+  font: 700 .7rem/1.05 Inter, sans-serif;
+  text-decoration: none;
+  padding: 3px;
+}
+
+.pos-action.pay-action { background: linear-gradient(#587aff, #1d2cba); color: #fff; }
+.pos-action.customer-action { background: linear-gradient(#df6ae7, #942ca1); color: #fff; }
+.pos-action[data-void-line] { background: linear-gradient(#ff4d4d, #bd0000); color: #fff; }
+.pos-action.manager-action { background: linear-gradient(#7955ef, #3c25ad); color: #fff; }
+
+body[data-app-mode="register"] .payment-grid .pay-method,
+body[data-app-mode="register"] .checkout-button,
+body[data-app-mode="register"] .icon-button {
+  border-radius: 0;
+}
+
 .menu-panel,
 .cart-panel,
 .orders-table-wrap,
@@ -282,6 +506,65 @@ select {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 14px;
   margin-bottom: 18px;
+}
+
+.report-actions {
+  display: flex;
+  align-items: end;
+  gap: 10px;
+}
+
+.report-range-label {
+  display: grid;
+  gap: 5px;
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.report-range-label select {
+  min-width: 150px;
+}
+
+.report-caption {
+  margin: -8px 0 16px;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.report-layout {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.report-list {
+  display: grid;
+  gap: 8px;
+}
+
+.report-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.report-row:last-child {
+  border-bottom: 0;
+}
+
+.report-row strong,
+.report-row span {
+  display: block;
+}
+
+.report-row span {
+  color: var(--muted);
+  font-size: .88rem;
 }
 
 .is-hidden {
@@ -599,6 +882,12 @@ body[data-app-mode="register"] .store-picker {
   font-size: 1rem;
 }
 
+#checkoutShortcut {
+  opacity: .72;
+  font-size: .78rem;
+  margin-left: 5px;
+}
+
 .checkout-button:disabled {
   background: #9aa8a1;
   cursor: not-allowed;
@@ -772,8 +1061,15 @@ dialog::backdrop {
   }
 
   .dashboard-grid,
-  .dashboard-layout {
+  .dashboard-layout,
+  .report-layout {
     grid-template-columns: 1fr;
+  }
+
+  .report-actions {
+    align-items: stretch;
+    flex-direction: column;
+    width: 100%;
   }
 
   .cart-panel {
@@ -826,5 +1122,44 @@ dialog::backdrop {
 
   .item-list-row {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 980px) {
+  body[data-app-mode="register"] .workspace {
+    padding: 5px;
+  }
+
+  body[data-app-mode="register"] .register-layout {
+    grid-template-columns: 1fr;
+    grid-template-areas: "cart" "actions" "menu";
+  }
+
+  body[data-app-mode="register"] .register-action-rail {
+    grid-template-columns: repeat(4, 1fr);
+    grid-auto-rows: 56px;
+  }
+
+  body[data-app-mode="register"] .menu-panel {
+    height: auto;
+    padding-right: 10px;
+    overflow: visible;
+  }
+
+  body[data-app-mode="register"] .category-strip {
+    position: static;
+    width: auto;
+    display: flex;
+    margin: 10px 0 0;
+    overflow-x: auto;
+  }
+
+  body[data-app-mode="register"] .category-button {
+    min-width: 86px;
+  }
+
+  body[data-app-mode="register"] .menu-grid {
+    max-height: none;
+    overflow: visible;
   }
 }

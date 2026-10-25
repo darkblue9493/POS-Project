@@ -34,6 +34,7 @@
 
         <nav class="nav-tabs" aria-label="POS views">
           <button class="tab-button active" type="button" data-view="dashboard" data-modes="back-office" title="Dashboard">Dashboard</button>
+          <button class="tab-button" type="button" data-view="reports" data-modes="back-office" title="Sales reports">Reports</button>
           <button class="tab-button" type="button" data-view="register" data-modes="register" title="Register">Register</button>
           <button class="tab-button" type="button" data-view="orders" data-modes="register back-office" title="Orders">Orders</button>
           <button class="tab-button" type="button" data-view="items" data-modes="back-office" title="Inventory">Inventory</button>
@@ -111,6 +112,10 @@
                   <strong>Review Orders</strong>
                   <span>Open today history</span>
                 </button>
+                <button class="action-button" type="button" data-jump-reports>
+                  <strong>Sales Report</strong>
+                  <span>See sales, best sellers, and payments</span>
+                </button>
               </div>
             </section>
 
@@ -119,6 +124,49 @@
                 <h3>Recent Orders</h3>
               </div>
               <div class="recent-orders" id="recentOrders"></div>
+            </section>
+          </div>
+        </section>
+
+        <section class="view" id="reportsView">
+          <header class="workspace-header">
+            <div>
+              <p class="eyebrow">Manager center</p>
+              <h2>Sales Report</h2>
+            </div>
+            <div class="header-actions report-actions">
+              <label class="report-range-label">Period
+                <select id="reportRange">
+                  <option value="today">Today</option>
+                  <option value="7">Last 7 days</option>
+                  <option value="30">Last 30 days</option>
+                  <option value="all">All sales</option>
+                </select>
+              </label>
+              <button class="secondary-button" id="exportReportButton" type="button">Export sales CSV</button>
+            </div>
+          </header>
+          <p class="report-caption" id="reportCaption">Sales for today</p>
+          <div class="dashboard-grid report-metrics">
+            <article class="metric-tile"><span>Gross sales</span><strong id="reportGrossSales">$0.00</strong></article>
+            <article class="metric-tile"><span>Discounts</span><strong id="reportDiscounts">$0.00</strong></article>
+            <article class="metric-tile"><span>Tax collected</span><strong id="reportTax">$0.00</strong></article>
+            <article class="metric-tile"><span>Tickets</span><strong id="reportTicketCount">0</strong></article>
+            <article class="metric-tile"><span>Average ticket</span><strong id="reportAverageTicket">$0.00</strong></article>
+            <article class="metric-tile"><span>Items sold</span><strong id="reportItemsSold">0</strong></article>
+          </div>
+          <div class="report-layout">
+            <section class="panel-section">
+              <div class="section-head"><h3>Payment summary</h3></div>
+              <div class="report-list" id="paymentReport"></div>
+            </section>
+            <section class="panel-section">
+              <div class="section-head"><h3>Best sellers</h3><span class="line-meta">By quantity</span></div>
+              <div class="report-list" id="bestSellerReport"></div>
+            </section>
+            <section class="panel-section">
+              <div class="section-head"><h3>Low stock</h3><span class="line-meta">5 or fewer left</span></div>
+              <div class="report-list" id="lowStockReport"></div>
             </section>
           </div>
         </section>
@@ -153,6 +201,17 @@
               </div>
               <div class="menu-grid" id="menuGrid"></div>
             </section>
+
+            <aside class="register-action-rail" aria-label="Ticket actions">
+              <button type="button" class="pos-action pay-action" data-pay-ticket>Pay<br>Order</button>
+              <button type="button" class="pos-action customer-action" data-focus-customer>Customer<br>Name</button>
+              <button type="button" class="pos-action" data-void-line>Void<br>Delete</button>
+              <button type="button" class="pos-action" data-start-over>Start<br>Over</button>
+              <button type="button" class="pos-action" data-show-last-receipt>Show<br>Receipt</button>
+              <button type="button" class="pos-action" data-toggle-discount>Discount</button>
+              <a class="pos-action manager-action" href="./back-office.html">Manager<br>Menu</a>
+              <button type="button" class="pos-action" data-reprint-last>Reprint<br>Receipt</button>
+            </aside>
 
             <aside class="cart-panel" aria-label="Current order">
               <div class="cart-head">
@@ -198,7 +257,7 @@
                 <button class="pay-method" type="button" data-payment="Online">Online</button>
               </div>
 
-              <button class="checkout-button" id="checkoutButton" type="button">Complete order</button>
+              <button class="checkout-button" id="checkoutButton" type="button">Complete order <span id="checkoutShortcut">F2</span></button>
             </aside>
           </div>
         </section>

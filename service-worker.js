@@ -1,4 +1,4 @@
-const cacheName = "pos-project-v8";
+const cacheName = "pos-project-v9";
 const assets = [
   "./",
   "./index.html",

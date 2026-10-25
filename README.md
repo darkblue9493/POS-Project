@@ -4,6 +4,12 @@ A local first point-of-sale prototype for a quick-service restaurant.
 
 Open `register.html` for the cashier register. Open `back-office.html` for management, reports, item setup, barcode/SKU entry, and settings. Orders and menu changes are saved in the browser on that device when used locally.
 
+## Install on a POS machine
+
+For a shared POS machine, run `npm start` and open `http://localhost:4188/register.html` in Chrome or Edge. Use the browser's **Install app** option to install it as a full-screen POS app. The register screen is designed for touch or barcode scanners that type like a keyboard: press `F4` to focus the scanner, `/` to search, `F2` to complete a ticket, and `Escape` to clear the current ticket.
+
+Open `http://localhost:4188/back-office.html` on a manager device to view the sales report. It shows completed-ticket totals, tax, discounts, payment collection, best sellers, and low-stock items. Set product stock counts in Inventory so the low-stock report is useful. Use distinct register and back-office PINs before using it with staff.
+
 To use it from a register tablet or another device on the same Wi-Fi:
 
 1. Double-click `start-pos-server.bat`.
