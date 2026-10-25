@@ -942,9 +942,10 @@
     const entries = getReportWaste();
     const totalQuantity = entries.reduce((sum, entry) => sum + Number(entry.quantity || 0), 0);
     elements.wasteReportSummary.textContent = `${totalQuantity} item${totalQuantity === 1 ? "" : "s"} recorded`;
-    const totals = new Map();
-    entries.forEach((entry) => totals.set(entry.itemName, (totals.get(entry.itemName) || 0) + Number(entry.quantity || 0)));
-    const rows = [...totals.entries()].sort((first, second) => second[1] - first[1]).map(([name, quantity]) => ({ label: name, detail: "Discarded / left over", value: `${quantity} units` }));
+    const rows = entries
+      .slice()
+      .sort((first, second) => new Date(second.createdAt) - new Date(first.createdAt))
+      .map((entry) => ({ label: `${entry.itemName} · ${entry.quantity} units`, detail: `${new Date(entry.createdAt).toLocaleString()} · ${entry.cashierName || "Cashier 1"}${entry.reason ? ` · ${entry.reason}` : ""}`, value: "Wasted" }));
     renderReportRows(elements.wasteReportList, rows, "No wastage recorded in this period");
   }
 
@@ -1539,7 +1540,7 @@
     getStoreItems().forEach((item) => {
       const option = document.createElement("option");
       option.value = item.id;
-      option.textContent = `${item.name} (${Number(item.stock) || 0} in stock)`;
+      option.textContent = item.name;
       elements.wasteItemSelect.appendChild(option);
     });
     if (!elements.wasteItemSelect.options.length) return;
@@ -1568,7 +1569,6 @@
     const quantity = Math.floor(Number(elements.wasteQuantityInput.value));
     if (!item || !Number.isFinite(quantity) || quantity < 1) return;
     state.waste.unshift({ id: uid("waste"), storeId: state.selectedStoreId, itemId: item.id, itemName: item.name, quantity, reason: elements.wasteReasonInput.value.trim(), cashierName: currentCashierName || "Cashier 1", createdAt: new Date().toISOString() });
-    item.stock = Math.max(0, (Number(item.stock) || 0) - quantity);
     elements.wasteDialog.close();
     render();
     await persistNow();
