@@ -1,4 +1,4 @@
-const cacheName = "pos-project-v9";
+const cacheName = "vedrix-pos-v10";
 const assets = [
   "./",
   "./index.html",

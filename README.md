@@ -1,4 +1,4 @@
-# Store POS
+# Vedrix POS
 
 A local first point-of-sale prototype for a quick-service restaurant.
 

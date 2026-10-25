@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Store POS</title>
+    <title>Vedrix POS</title>
     <meta name="theme-color" content="#16241d" />
     <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="stylesheet" href="./styles.css" />
@@ -14,7 +14,7 @@
         <div class="brand-mark">POS</div>
         <div>
           <p class="eyebrow">Secure register</p>
-          <h1>POS Project</h1>
+          <h1>Vedrix POS</h1>
         </div>
         <input id="pinInput" type="password" inputmode="numeric" autocomplete="current-password" placeholder="Enter PIN" required />
         <button class="checkout-button" type="submit">Unlock</button>
@@ -22,24 +22,30 @@
       </form>
     </div>
 
+    <header class="manager-topbar" aria-label="Vedrix POS manager header">
+      <a class="manager-logo" href="./back-office.html" aria-label="Vedrix POS home">VEDRIX <span>POS</span></a>
+      <div class="manager-breadcrumb"><span class="menu-glyph">☰</span><span>Manager / Snapshot</span></div>
+      <div class="manager-account">Store manager</div>
+    </header>
+
     <div class="app-shell">
       <aside class="sidebar">
         <div class="brand-block">
-          <div class="brand-mark">POS</div>
+          <div class="brand-mark">V</div>
           <div>
-            <p class="eyebrow">Live register</p>
+            <p class="eyebrow">Vedrix POS</p>
             <h1 id="storeName">Tender House</h1>
           </div>
         </div>
 
         <nav class="nav-tabs" aria-label="POS views">
-          <button class="tab-button active" type="button" data-view="dashboard" data-modes="back-office" title="Dashboard">Dashboard</button>
-          <button class="tab-button" type="button" data-view="reports" data-modes="back-office" title="Sales reports">Reports</button>
+          <button class="tab-button active" type="button" data-view="dashboard" data-modes="back-office" title="Dashboard">Dashboard <span>›</span></button>
+          <button class="tab-button" type="button" data-view="reports" data-modes="back-office" title="Sales reports">Sales Reports <span>›</span></button>
           <button class="tab-button" type="button" data-view="register" data-modes="register" title="Register">Register</button>
-          <button class="tab-button" type="button" data-view="orders" data-modes="register back-office" title="Orders">Orders</button>
-          <button class="tab-button" type="button" data-view="items" data-modes="back-office" title="Inventory">Inventory</button>
-          <button class="tab-button" type="button" data-view="promotions" data-modes="back-office" title="Promotions">Promotions</button>
-          <button class="tab-button" type="button" data-view="settings" data-modes="back-office" title="Settings">Settings</button>
+          <button class="tab-button" type="button" data-view="orders" data-modes="register back-office" title="Orders">Orders <span>›</span></button>
+          <button class="tab-button" type="button" data-view="items" data-modes="back-office" title="Inventory">Inventory <span>›</span></button>
+          <button class="tab-button" type="button" data-view="promotions" data-modes="back-office" title="Promotions">Promotions <span>›</span></button>
+          <button class="tab-button" type="button" data-view="settings" data-modes="back-office" title="Settings">Configuration <span>›</span></button>
         </nav>
 
         <div class="status-panel">
@@ -57,8 +63,8 @@
         <section class="view active" id="dashboardView">
           <header class="workspace-header">
             <div>
-              <p class="eyebrow">Today</p>
-              <h2>Dashboard</h2>
+              <p class="eyebrow">Vedrix POS · Manager console</p>
+              <h2>Dashboard snapshot</h2>
             </div>
             <button class="primary-button" type="button" data-add-store>Add store</button>
           </header>
@@ -69,7 +75,7 @@
               <strong id="todaySales">$0.00</strong>
             </article>
             <article class="metric-tile">
-              <span>Orders</span>
+              <span>Tickets</span>
               <strong id="todayOrders">0</strong>
             </article>
             <article class="metric-tile">

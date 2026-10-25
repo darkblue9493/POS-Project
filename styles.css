@@ -25,6 +25,221 @@ body {
   color: var(--ink);
 }
 
+.manager-topbar {
+  display: none;
+}
+
+/* Vedrix POS manager workspace */
+body[data-app-mode="back-office"] {
+  background: #edf2f7;
+}
+
+body[data-app-mode="back-office"] .manager-topbar {
+  height: 76px;
+  display: flex;
+  align-items: center;
+  gap: 36px;
+  padding: 0 32px;
+  background: linear-gradient(110deg, #e74d3b, #ce3c32);
+  color: #fff;
+  box-shadow: 0 2px 9px rgba(71, 28, 25, .2);
+}
+
+.manager-logo {
+  color: #fff;
+  font-size: 1.55rem;
+  font-weight: 950;
+  font-style: italic;
+  letter-spacing: .08em;
+  text-decoration: none;
+}
+
+.manager-logo span {
+  display: block;
+  margin-top: -4px;
+  font-size: .56rem;
+  font-style: normal;
+  letter-spacing: .28em;
+}
+
+.manager-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.menu-glyph {
+  font-size: 1.45rem;
+}
+
+.manager-account {
+  margin-left: auto;
+  font-weight: 750;
+}
+
+body[data-app-mode="back-office"] .app-shell {
+  min-height: calc(100vh - 76px);
+  grid-template-columns: 270px minmax(0, 1fr);
+}
+
+body[data-app-mode="back-office"] .sidebar {
+  padding: 22px 15px;
+  gap: 20px;
+  color: #253647;
+  background: #fff;
+  border-right: 1px solid #d6dee7;
+}
+
+body[data-app-mode="back-office"] .brand-block {
+  padding: 0 10px 12px;
+}
+
+body[data-app-mode="back-office"] .brand-mark {
+  width: 42px;
+  height: 42px;
+  background: linear-gradient(145deg, #e84e3d, #af2f2d);
+  color: #fff;
+  box-shadow: 0 6px 15px rgba(207, 60, 50, .22);
+}
+
+body[data-app-mode="back-office"] .sidebar .eyebrow,
+body[data-app-mode="back-office"] .store-picker span {
+  color: #7d8b9a;
+}
+
+body[data-app-mode="back-office"] .nav-tabs {
+  gap: 4px;
+}
+
+body[data-app-mode="back-office"] .tab-button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 48px;
+  border: 0;
+  border-radius: 6px;
+  color: #34485c;
+  font-weight: 760;
+}
+
+body[data-app-mode="back-office"] .tab-button:hover {
+  background: #f1f4f7;
+}
+
+body[data-app-mode="back-office"] .tab-button.active {
+  background: #e8eef4;
+  color: #d24435;
+  box-shadow: inset 3px 0 #e74d3b;
+}
+
+body[data-app-mode="back-office"] .status-panel {
+  color: #587084;
+  margin-top: 8px;
+}
+
+body[data-app-mode="back-office"] .store-picker {
+  color: #34485c;
+}
+
+body[data-app-mode="back-office"] .store-picker select {
+  border-color: #cfd9e2;
+  background: #fff;
+}
+
+body[data-app-mode="back-office"] .workspace {
+  padding: 28px 34px 42px;
+}
+
+body[data-app-mode="back-office"] .workspace-header {
+  min-height: 68px;
+  margin-bottom: 22px;
+}
+
+body[data-app-mode="back-office"] .workspace-header h2 {
+  color: #1d3043;
+  font-size: 1.78rem;
+}
+
+body[data-app-mode="back-office"] .dashboard-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+
+body[data-app-mode="back-office"] .metric-tile {
+  position: relative;
+  min-height: 142px;
+  overflow: hidden;
+  border: 0;
+  border-radius: 7px;
+  color: #fff;
+  box-shadow: 0 12px 24px rgba(37, 56, 77, .14);
+}
+
+body[data-app-mode="back-office"] .metric-tile::after {
+  position: absolute;
+  right: 18px;
+  bottom: 8px;
+  color: rgba(255,255,255,.18);
+  font-size: 4rem;
+  font-weight: 900;
+}
+
+body[data-app-mode="back-office"] .metric-tile span {
+  color: rgba(255,255,255,.9);
+}
+
+body[data-app-mode="back-office"] .metric-tile strong {
+  font-size: 2.2rem;
+}
+
+body[data-app-mode="back-office"] .metric-tile:nth-child(1) { background: linear-gradient(135deg, #00a85a, #008d59); }
+body[data-app-mode="back-office"] .metric-tile:nth-child(1)::after { content: "$"; }
+body[data-app-mode="back-office"] .metric-tile:nth-child(2) { background: linear-gradient(135deg, #17bde5, #079bc6); }
+body[data-app-mode="back-office"] .metric-tile:nth-child(2)::after { content: "✓"; }
+body[data-app-mode="back-office"] .metric-tile:nth-child(3) { background: linear-gradient(135deg, #e94f3d, #c73c35); }
+body[data-app-mode="back-office"] .metric-tile:nth-child(3)::after { content: "◷"; }
+body[data-app-mode="back-office"] .metric-tile:nth-child(4) { background: linear-gradient(135deg, #ff9d1d, #ee7612); }
+body[data-app-mode="back-office"] .metric-tile:nth-child(4)::after { content: "▣"; }
+body[data-app-mode="back-office"] .metric-tile:nth-child(5) { background: linear-gradient(135deg, #526bde, #3d55bc); }
+body[data-app-mode="back-office"] .metric-tile:nth-child(5)::after { content: "▤"; }
+body[data-app-mode="back-office"] .metric-tile:nth-child(6) { background: linear-gradient(135deg, #7b5fd2, #5942a8); }
+body[data-app-mode="back-office"] .metric-tile:nth-child(6)::after { content: "%"; }
+
+body[data-app-mode="back-office"] .panel-section,
+body[data-app-mode="back-office"] .orders-table-wrap,
+body[data-app-mode="back-office"] .item-form,
+body[data-app-mode="back-office"] .settings-form {
+  border: 1px solid #d7e0e8;
+  border-top: 4px solid #12a765;
+  border-radius: 6px;
+  box-shadow: 0 5px 18px rgba(44, 60, 77, .07);
+}
+
+body[data-app-mode="back-office"] .dashboard-layout {
+  grid-template-columns: minmax(300px, .85fr) minmax(0, 1.15fr);
+  gap: 22px;
+}
+
+body[data-app-mode="back-office"] .action-button,
+body[data-app-mode="back-office"] .recent-order {
+  border-radius: 5px;
+  box-shadow: none;
+}
+
+body[data-app-mode="back-office"] .report-layout {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+body[data-app-mode="back-office"] .report-row {
+  padding: 13px 0;
+}
+
+body[data-app-mode="back-office"] .primary-button {
+  background: #e14b3b;
+}
+
 .login-screen {
   position: fixed;
   inset: 0;
