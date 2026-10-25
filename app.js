@@ -625,7 +625,11 @@
 
   function getTodaysOrders() {
     const today = new Date().toDateString();
-    return state.orders.filter((order) => new Date(order.createdAt).toDateString() === today && (order.storeId || state.selectedStoreId) === state.selectedStoreId);
+    return getSelectedStoreOrders().filter((order) => new Date(order.createdAt).toDateString() === today);
+  }
+
+  function getSelectedStoreOrders() {
+    return state.orders.filter((order) => (order.storeId || state.selectedStoreId) === state.selectedStoreId);
   }
 
   function getReportOrders() {
@@ -774,7 +778,7 @@
     elements.activePromoCount.textContent = String(state.promotions.filter((promo) => promo.storeId === state.selectedStoreId && promo.active).length);
     elements.recentOrders.innerHTML = "";
 
-    if (!state.orders.length) {
+    if (!orders.length) {
       const empty = document.createElement("div");
       empty.className = "empty-state";
       empty.textContent = "No orders yet";
@@ -782,7 +786,7 @@
       return;
     }
 
-    state.orders.slice(0, 5).forEach((order) => {
+    orders.slice(0, 5).forEach((order) => {
       const row = document.createElement("button");
       row.className = "recent-order";
       row.type = "button";
@@ -1029,13 +1033,14 @@
 
   function renderOrders() {
     elements.ordersTableBody.innerHTML = "";
-    if (!state.orders.length) {
+    const orders = getSelectedStoreOrders();
+    if (!orders.length) {
       const row = document.createElement("tr");
       row.innerHTML = '<td colspan="7">No orders yet</td>';
       elements.ordersTableBody.appendChild(row);
       return;
     }
-    state.orders.forEach((order) => {
+    orders.forEach((order) => {
       const row = document.createElement("tr");
       row.innerHTML = `
         <td>#${order.id}</td>
@@ -1120,7 +1125,7 @@
     });
   }
 
-  function exportOrders(orders = state.orders, filename = "pos-orders.csv") {
+  function exportOrders(orders = getSelectedStoreOrders(), filename = "pos-orders.csv") {
     const header = ["order", "customer", "type", "source", "payment", "subtotal", "discount", "tax", "total", "note", "created_at"];
     const rows = orders.map((order) => [
       order.id,
