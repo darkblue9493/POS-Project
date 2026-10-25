@@ -87,6 +87,7 @@
   const elements = {
     storeName: document.getElementById("storeName"),
     registerStoreName: document.getElementById("registerStoreName"),
+    registerView: document.getElementById("registerView"),
     modeLabel: document.getElementById("modeLabel"),
     storeSelect: document.getElementById("storeSelect"),
     todaySales: document.getElementById("todaySales"),
@@ -199,6 +200,7 @@
   const appMode = getAppMode();
   let loginRole = appMode;
   let currentCashierName = "Cashier 1";
+  let registerAudioContext = null;
 
   function getAppMode() {
     const mode = new URLSearchParams(location.search).get("mode");
@@ -341,6 +343,27 @@
 
   function price(value) {
     return money.format(Number(value) || 0);
+  }
+
+  function playRegisterClick() {
+    if (appMode !== "register") return;
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextClass) return;
+    try {
+      registerAudioContext ||= new AudioContextClass();
+      const oscillator = registerAudioContext.createOscillator();
+      const gain = registerAudioContext.createGain();
+      oscillator.type = "sine";
+      oscillator.frequency.setValueAtTime(760, registerAudioContext.currentTime);
+      oscillator.frequency.exponentialRampToValueAtTime(560, registerAudioContext.currentTime + 0.055);
+      gain.gain.setValueAtTime(0.045, registerAudioContext.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, registerAudioContext.currentTime + 0.06);
+      oscillator.connect(gain).connect(registerAudioContext.destination);
+      oscillator.start();
+      oscillator.stop(registerAudioContext.currentTime + 0.065);
+    } catch (error) {
+      // Audio is optional; browsers can block it until a user interaction is trusted.
+    }
   }
 
   function getCategories() {
@@ -1172,6 +1195,10 @@
   }
 
   elements.tabs.forEach((tab) => tab.addEventListener("click", () => setView(tab.dataset.view)));
+  elements.registerView.addEventListener("click", (event) => {
+    const button = event.target.closest("button");
+    if (button && !button.disabled) playRegisterClick();
+  });
   document.querySelectorAll("[data-add-store]").forEach((button) => {
     button.addEventListener("click", () => {
       setView("settings");
