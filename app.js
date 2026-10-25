@@ -1094,12 +1094,23 @@
     return String(value || "").trim().toLowerCase();
   }
 
+  function cdbLookupBarcode(value) {
+    const digits = String(value || "").replace(/\D/g, "");
+    return digits.length === 12 ? digits.slice(0, -1) : digits;
+  }
+
+  function barcodeMatches(candidate, scanned) {
+    const candidateValue = normalizeBarcode(candidate);
+    const scannedValue = normalizeBarcode(scanned);
+    return candidateValue === scannedValue || (cdbLookupBarcode(candidateValue) && cdbLookupBarcode(candidateValue) === cdbLookupBarcode(scannedValue));
+  }
+
   function scanBarcode(value) {
     const code = normalizeBarcode(value);
     if (!code) return;
     const item = state.items.find((candidate) =>
       candidate.storeId === state.selectedStoreId &&
-      [candidate.barcode, candidate.sku, candidate.id, receiptBarcodeValue(candidate)].some((candidateCode) => normalizeBarcode(candidateCode) === code)
+      [candidate.barcode, candidate.sku, candidate.id, receiptBarcodeValue(candidate)].some((candidateCode) => barcodeMatches(candidateCode, code))
     );
     if (!item) {
       elements.barcodeScanInput.value = "";
