@@ -195,24 +195,6 @@ function cdbBarcodeFor(item) {
 }
 
 function normalizeDb(saved) {
-  if (saved.menuVersion !== defaultDb.menuVersion) {
-    const migratedSettings = { ...defaultDb.settings, ...saved.settings };
-    if (!saved.settings || saved.settings.storeName === "Tender House") {
-      migratedSettings.storeName = defaultDb.settings.storeName;
-    }
-    return {
-      ...withBarcodes(defaultDb),
-      settings: migratedSettings,
-      stores: Array.isArray(saved.stores) && saved.stores.length ? saved.stores : defaultDb.stores,
-      registers: Array.isArray(saved.registers) && saved.registers.length ? saved.registers : defaultDb.registers,
-      users: Array.isArray(saved.users) ? saved.users : [],
-      promotions: Array.isArray(saved.promotions) ? saved.promotions : [],
-      waste: Array.isArray(saved.waste) ? saved.waste : [],
-      coupons: Array.isArray(saved.coupons) ? saved.coupons : [],
-      nextOrderNumber: Number(saved.nextOrderNumber) || defaultDb.nextOrderNumber,
-      orders: Array.isArray(saved.orders) ? saved.orders : []
-    };
-  }
   return withBarcodes({
     ...defaultDb,
     ...saved,
