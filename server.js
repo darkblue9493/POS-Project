@@ -179,9 +179,19 @@ function withBarcodes(db) {
       storeId: item.storeId || "thomaston-raceway",
       stock: Number(item.stock) || 0,
       cost: Number(item.cost) || 0,
-      barcode: item.barcode || item.sku || item.id
+      barcode: cdbBarcodeFor(item)
     }))
   };
+}
+
+function cdbBarcodeFor(item) {
+  const saved = String(item.barcode || item.sku || "");
+  if (saved && saved !== item.id) return saved;
+  const index = defaultDb.items.findIndex((candidate) => candidate.id === item.id);
+  if (index < 0) return saved || item.id;
+  const lookup = `4${String(index + 1).padStart(10, "0")}`;
+  const sum = lookup.split("").reduce((total, digit, position) => total + Number(digit) * (position % 2 === 0 ? 3 : 1), 0);
+  return `${lookup}${(10 - (sum % 10)) % 10}`;
 }
 
 function normalizeDb(saved) {
@@ -207,7 +217,7 @@ function normalizeDb(saved) {
     ...defaultDb,
     ...saved,
     settings: { ...defaultDb.settings, ...saved.settings },
-    items: (Array.isArray(saved.items) ? saved.items : defaultDb.items).map((item) => ({ ...item, barcode: item.barcode || item.sku || item.id })),
+    items: Array.isArray(saved.items) ? saved.items : defaultDb.items,
     orders: Array.isArray(saved.orders) ? saved.orders : []
   });
 }

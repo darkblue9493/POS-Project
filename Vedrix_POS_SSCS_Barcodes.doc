@@ -1,0 +1,117 @@
+{\rtf1\ansi\deff0
+{\fonttbl{\f0 Arial;}{\f1 Courier New;}}
+\paperw12240\paperh15840\margl720\margr720\margt720\margb720
+\fs28\b Vedrix POS — SCCS / CDB Barcode Catalog\b0\par
+\fs20 Generated for the current Vedrix POS menu. Upload the 11-digit CDB lookup number to SCCS. The 12-digit UPC-A code includes the scanner check digit.\par\par
+\b Important:\b0 Each barcode represents one menu item. Keep the same barcode for the same item in Vedrix and SCCS.\par\par
+\trowd\trgaph108\cellx3800\cellx6100\cellx8400\cellx10100
+\intbl\b Item\cell Category\cell CDB lookup (11 digits)\cell UPC-A scanner code (12 digits)\b0\cell\row
+\trowd\trgaph108\cellx3800\cellx6100\cellx8400\cellx10100
+\intbl 2 Piece Bone-In Box\cell Krunch Box Bone-In\cell \f1 40000000001\f0\cell \f1 400000000015\f0\cell\row
+\trowd\trgaph108\cellx3800\cellx6100\cellx8400\cellx10100
+\intbl 3 Piece Bone-In Box\cell Krunch Box Bone-In\cell \f1 40000000002\f0\cell \f1 400000000022\f0\cell\row
+\trowd\trgaph108\cellx3800\cellx6100\cellx8400\cellx10100
+\intbl 4 Piece Bone-In Box\cell Krunch Box Bone-In\cell \f1 40000000003\f0\cell \f1 400000000039\f0\cell\row
+\trowd\trgaph108\cellx3800\cellx6100\cellx8400\cellx10100
+\intbl 2 Piece Chicken w/ Biscuit\cell Chicken & Biscuit\cell \f1 40000000004\f0\cell \f1 400000000046\f0\cell\row
+\trowd\trgaph108\cellx3800\cellx6100\cellx8400\cellx10100
+\intbl 3 Piece Chicken w/ Biscuit\cell Chicken & Biscuit\cell \f1 40000000005\f0\cell \f1 400000000053\f0\cell\row
+\trowd\trgaph108\cellx3800\cellx6100\cellx8400\cellx10100
+\intbl 4 Piece Chicken w/ Biscuit\cell Chicken & Biscuit\cell \f1 40000000006\f0\cell \f1 400000000060\f0\cell\row
+\trowd\trgaph108\cellx3800\cellx6100\cellx8400\cellx10100
+\intbl 3 Piece Tender Box\cell Krunch Box Tenders\cell \f1 40000000007\f0\cell \f1 400000000077\f0\cell\row
+\trowd\trgaph108\cellx3800\cellx6100\cellx8400\cellx10100
+\intbl 4 Piece Tender Box\cell Krunch Box Tenders\cell \f1 40000000008\f0\cell \f1 400000000084\f0\cell\row
+\trowd\trgaph108\cellx3800\cellx6100\cellx8400\cellx10100
+\intbl 6 Piece Tender Box\cell Krunch Box Tenders\cell \f1 40000000009\f0\cell \f1 400000000091\f0\cell\row
+\trowd\trgaph108\cellx3800\cellx6100\cellx8400\cellx10100
+\intbl 3 Piece Tender w/ Biscuit\cell Tender & Biscuit\cell \f1 40000000010\f0\cell \f1 400000000107\f0\cell\row
+\trowd\trgaph108\cellx3800\cellx6100\cellx8400\cellx10100
+\intbl 4 Piece Tender w/ Biscuit\cell Tender & Biscuit\cell \f1 40000000011\f0\cell \f1 400000000114\f0\cell\row
+\trowd\trgaph108\cellx3800\cellx6100\cellx8400\cellx10100
+\intbl 6 Piece Tender w/ Biscuit\cell Tender & Biscuit\cell \f1 40000000012\f0\cell \f1 400000000121\f0\cell\row
+\trowd\trgaph108\cellx3800\cellx6100\cellx8400\cellx10100
+\intbl 5 Piece Wings\cell Wings\cell \f1 40000000013\f0\cell \f1 400000000138\f0\cell\row
+\trowd\trgaph108\cellx3800\cellx6100\cellx8400\cellx10100
+\intbl 10 Piece Wings\cell Wings\cell \f1 40000000014\f0\cell \f1 400000000145\f0\cell\row
+\trowd\trgaph108\cellx3800\cellx6100\cellx8400\cellx10100
+\intbl 20 Piece Wings\cell Wings\cell \f1 40000000015\f0\cell \f1 400000000152\f0\cell\row
+\trowd\trgaph108\cellx3800\cellx6100\cellx8400\cellx10100
+\intbl 5 Piece Shrimp w/ Biscuit\cell Shrimp\cell \f1 40000000016\f0\cell \f1 400000000169\f0\cell\row
+\trowd\trgaph108\cellx3800\cellx6100\cellx8400\cellx10100
+\intbl 10 Piece Shrimp w/ Biscuit\cell Shrimp\cell \f1 40000000017\f0\cell \f1 400000000176\f0\cell\row
+\trowd\trgaph108\cellx3800\cellx6100\cellx8400\cellx10100
+\intbl Chicken Sandwich\cell Sandwiches\cell \f1 40000000018\f0\cell \f1 400000000183\f0\cell\row
+\trowd\trgaph108\cellx3800\cellx6100\cellx8400\cellx10100
+\intbl Chicken Sandwich Combo\cell Sandwiches\cell \f1 40000000019\f0\cell \f1 400000000190\f0\cell\row
+\trowd\trgaph108\cellx3800\cellx6100\cellx8400\cellx10100
+\intbl Family Chicken & Tenders\cell Family Meals\cell \f1 40000000020\f0\cell \f1 400000000206\f0\cell\row
+\trowd\trgaph108\cellx3800\cellx6100\cellx8400\cellx10100
+\intbl Family Chicken Only\cell Family Meals\cell \f1 40000000021\f0\cell \f1 400000000213\f0\cell\row
+\trowd\trgaph108\cellx3800\cellx6100\cellx8400\cellx10100
+\intbl Family Tenders Only\cell Family Meals\cell \f1 40000000022\f0\cell \f1 400000000220\f0\cell\row
+\trowd\trgaph108\cellx3800\cellx6100\cellx8400\cellx10100
+\intbl Honey Butter Biscuit (1)\cell Biscuits\cell \f1 40000000023\f0\cell \f1 400000000237\f0\cell\row
+\trowd\trgaph108\cellx3800\cellx6100\cellx8400\cellx10100
+\intbl Honey Butter Biscuits (2)\cell Biscuits\cell \f1 40000000024\f0\cell \f1 400000000244\f0\cell\row
+\trowd\trgaph108\cellx3800\cellx6100\cellx8400\cellx10100
+\intbl Honey Butter Biscuits (6)\cell Biscuits\cell \f1 40000000025\f0\cell \f1 400000000251\f0\cell\row
+\trowd\trgaph108\cellx3800\cellx6100\cellx8400\cellx10100
+\intbl Wedges Small\cell Sides\cell \f1 40000000026\f0\cell \f1 400000000268\f0\cell\row
+\trowd\trgaph108\cellx3800\cellx6100\cellx8400\cellx10100
+\intbl Wedges Large\cell Sides\cell \f1 40000000027\f0\cell \f1 400000000275\f0\cell\row
+\trowd\trgaph108\cellx3800\cellx6100\cellx8400\cellx10100
+\intbl Wedges Family\cell Sides\cell \f1 40000000028\f0\cell \f1 400000000282\f0\cell\row
+\trowd\trgaph108\cellx3800\cellx6100\cellx8400\cellx10100
+\intbl Mashed Potatoes Small\cell Sides\cell \f1 40000000029\f0\cell \f1 400000000299\f0\cell\row
+\trowd\trgaph108\cellx3800\cellx6100\cellx8400\cellx10100
+\intbl Mashed Potatoes Large\cell Sides\cell \f1 40000000030\f0\cell \f1 400000000305\f0\cell\row
+\trowd\trgaph108\cellx3800\cellx6100\cellx8400\cellx10100
+\intbl Red Beans & Rice Small\cell Sides\cell \f1 40000000031\f0\cell \f1 400000000312\f0\cell\row
+\trowd\trgaph108\cellx3800\cellx6100\cellx8400\cellx10100
+\intbl Red Beans & Rice Large\cell Sides\cell \f1 40000000032\f0\cell \f1 400000000329\f0\cell\row
+\trowd\trgaph108\cellx3800\cellx6100\cellx8400\cellx10100
+\intbl Mac n Cheese Small\cell Sides\cell \f1 40000000033\f0\cell \f1 400000000336\f0\cell\row
+\trowd\trgaph108\cellx3800\cellx6100\cellx8400\cellx10100
+\intbl Mac n Cheese Large\cell Sides\cell \f1 40000000034\f0\cell \f1 400000000343\f0\cell\row
+\trowd\trgaph108\cellx3800\cellx6100\cellx8400\cellx10100
+\intbl Jambalaya Small\cell Sides\cell \f1 40000000035\f0\cell \f1 400000000350\f0\cell\row
+\trowd\trgaph108\cellx3800\cellx6100\cellx8400\cellx10100
+\intbl Jambalaya Large\cell Sides\cell \f1 40000000036\f0\cell \f1 400000000367\f0\cell\row
+\trowd\trgaph108\cellx3800\cellx6100\cellx8400\cellx10100
+\intbl Leg\cell A La Carte\cell \f1 40000000037\f0\cell \f1 400000000374\f0\cell\row
+\trowd\trgaph108\cellx3800\cellx6100\cellx8400\cellx10100
+\intbl Thigh\cell A La Carte\cell \f1 40000000038\f0\cell \f1 400000000381\f0\cell\row
+\trowd\trgaph108\cellx3800\cellx6100\cellx8400\cellx10100
+\intbl Wing\cell A La Carte\cell \f1 40000000039\f0\cell \f1 400000000398\f0\cell\row
+\trowd\trgaph108\cellx3800\cellx6100\cellx8400\cellx10100
+\intbl Tender\cell A La Carte\cell \f1 40000000040\f0\cell \f1 400000000404\f0\cell\row
+\trowd\trgaph108\cellx3800\cellx6100\cellx8400\cellx10100
+\intbl Only Chicken 8 Piece\cell Only Chicken\cell \f1 40000000041\f0\cell \f1 400000000411\f0\cell\row
+\trowd\trgaph108\cellx3800\cellx6100\cellx8400\cellx10100
+\intbl Only Chicken 12 Piece\cell Only Chicken\cell \f1 40000000042\f0\cell \f1 400000000428\f0\cell\row
+\trowd\trgaph108\cellx3800\cellx6100\cellx8400\cellx10100
+\intbl Only Chicken 16 Piece\cell Only Chicken\cell \f1 40000000043\f0\cell \f1 400000000435\f0\cell\row
+\trowd\trgaph108\cellx3800\cellx6100\cellx8400\cellx10100
+\intbl Only Tenders 8 Piece\cell Only Tenders\cell \f1 40000000044\f0\cell \f1 400000000442\f0\cell\row
+\trowd\trgaph108\cellx3800\cellx6100\cellx8400\cellx10100
+\intbl Only Tenders 12 Piece\cell Only Tenders\cell \f1 40000000045\f0\cell \f1 400000000459\f0\cell\row
+\trowd\trgaph108\cellx3800\cellx6100\cellx8400\cellx10100
+\intbl Only Tenders 16 Piece\cell Only Tenders\cell \f1 40000000046\f0\cell \f1 400000000466\f0\cell\row
+\trowd\trgaph108\cellx3800\cellx6100\cellx8400\cellx10100
+\intbl 6 Nuggets w/ Biscuit\cell Nuggets\cell \f1 40000000047\f0\cell \f1 400000000473\f0\cell\row
+\trowd\trgaph108\cellx3800\cellx6100\cellx8400\cellx10100
+\intbl 10 Nuggets w/ Biscuit\cell Nuggets\cell \f1 40000000048\f0\cell \f1 400000000480\f0\cell\row
+\trowd\trgaph108\cellx3800\cellx6100\cellx8400\cellx10100
+\intbl 6 Nuggets Krunch Box\cell Nuggets\cell \f1 40000000049\f0\cell \f1 400000000497\f0\cell\row
+\trowd\trgaph108\cellx3800\cellx6100\cellx8400\cellx10100
+\intbl 10 Nuggets Krunch Box\cell Nuggets\cell \f1 40000000050\f0\cell \f1 400000000503\f0\cell\row
+\trowd\trgaph108\cellx3800\cellx6100\cellx8400\cellx10100
+\intbl 6 Nuggets\cell Nuggets\cell \f1 40000000051\f0\cell \f1 400000000510\f0\cell\row
+\trowd\trgaph108\cellx3800\cellx6100\cellx8400\cellx10100
+\intbl 10 Nuggets\cell Nuggets\cell \f1 40000000052\f0\cell \f1 400000000527\f0\cell\row
+\trowd\trgaph108\cellx3800\cellx6100\cellx8400\cellx10100
+\intbl Corn Dog\cell Misc\cell \f1 40000000053\f0\cell \f1 400000000534\f0\cell\row
+\trowd\trgaph108\cellx3800\cellx6100\cellx8400\cellx10100
+\intbl Egg Roll\cell Misc\cell \f1 40000000054\f0\cell \f1 400000000541\f0\cell\row
+\par\fs18 Keep this catalog private to your stores. Do not assign the same code to two items.\par}
