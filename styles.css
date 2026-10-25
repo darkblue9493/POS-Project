@@ -253,6 +253,13 @@ body[data-app-mode="back-office"] .primary-button {
   background: #e14b3b;
 }
 
+.item-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
 .login-screen {
   position: fixed;
   inset: 0;

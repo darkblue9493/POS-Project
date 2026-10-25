@@ -348,6 +348,7 @@
             </div>
           </header>
           <form class="item-form" id="itemForm">
+            <input id="itemEditId" type="hidden" />
             <input id="itemNameInput" type="text" placeholder="Item name" required />
             <input id="itemCategoryInput" type="text" placeholder="Category" required />
             <input id="itemPriceInput" type="number" min="0" step="0.01" placeholder="Price" required />
@@ -358,7 +359,8 @@
               <input id="itemTenderInput" type="checkbox" />
               <span>Tender item</span>
             </label>
-            <button class="primary-button" type="submit">Add item</button>
+            <button class="primary-button" id="itemSubmitButton" type="submit">Add item</button>
+            <button class="secondary-button" id="cancelItemEditButton" type="button" hidden>Cancel edit</button>
           </form>
           <p class="backoffice-note">Scan or type a barcode/SKU while adding an item. At the register, scan that same code and the product is added to the cart.</p>
           <div class="item-list" id="itemList"></div>

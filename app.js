@@ -156,6 +156,7 @@
     purgePreview: document.getElementById("purgePreview"),
     deleteOldOrdersButton: document.getElementById("deleteOldOrdersButton"),
     itemForm: document.getElementById("itemForm"),
+    itemEditId: document.getElementById("itemEditId"),
     itemNameInput: document.getElementById("itemNameInput"),
     itemCategoryInput: document.getElementById("itemCategoryInput"),
     itemPriceInput: document.getElementById("itemPriceInput"),
@@ -163,6 +164,8 @@
     itemStockInput: document.getElementById("itemStockInput"),
     itemBarcodeInput: document.getElementById("itemBarcodeInput"),
     itemTenderInput: document.getElementById("itemTenderInput"),
+    itemSubmitButton: document.getElementById("itemSubmitButton"),
+    cancelItemEditButton: document.getElementById("cancelItemEditButton"),
     itemList: document.getElementById("itemList"),
     settingsForm: document.getElementById("settingsForm"),
     storeForm: document.getElementById("storeForm"),
@@ -348,7 +351,7 @@
       currentCashierName = preferredCashierName || data.session?.cashierName || "Cashier 1";
       hydrated = true;
       setLoginVisible(false);
-      render();
+      render(true);
       setView(getAllowedViews()[0]);
     } catch (error) {
       setLoginVisible(true);
@@ -461,7 +464,7 @@
     render();
   }
 
-  function render() {
+  function render(skipSave = false) {
     ensureSelectedStore();
     const selectedStore = getSelectedStore();
     elements.storeName.textContent = selectedStore.name;
@@ -485,7 +488,32 @@
     renderDashboard();
     renderReports();
     renderPurgePreview();
-    saveState();
+    if (!skipSave) saveState();
+  }
+
+  async function refreshRemoteState() {
+    if (!remoteMode || !hydrated || document.hidden) return;
+    try {
+      const data = await api("/api/state");
+      const selectedStoreId = appMode === "register" ? (data.session?.storeId || state.selectedStoreId) : state.selectedStoreId;
+      const cart = state.cart;
+      const activeCategory = state.activeCategory;
+      const orderType = state.orderType;
+      const payment = state.payment;
+      state = {
+        ...state,
+        ...data.state,
+        selectedStoreId,
+        cart,
+        activeCategory,
+        orderType,
+        payment,
+      };
+      currentCashierName = data.session?.cashierName || currentCashierName || "Cashier 1";
+      render(true);
+    } catch (error) {
+      // A temporary connection issue must never interrupt an active register.
+    }
   }
 
   function ensureSelectedStore() {
@@ -1138,15 +1166,41 @@
         </div>
         <span>${escapeHtml(item.barcode || "No barcode")}</span>
         <strong>${price(item.price)}</strong>
-        <button class="secondary-button" type="button">Remove</button>
+        <div class="item-row-actions">
+          <button class="secondary-button" type="button" data-action="edit">Edit</button>
+          <button class="secondary-button danger-button" type="button" data-action="remove">Remove</button>
+        </div>
       `;
-      row.querySelector("button").addEventListener("click", () => {
+      row.querySelector('[data-action="edit"]').addEventListener("click", () => startItemEdit(item));
+      row.querySelector('[data-action="remove"]').addEventListener("click", () => {
         state.items = state.items.filter((candidate) => candidate.id !== item.id);
         state.cart = state.cart.filter((candidate) => candidate.id !== item.id);
+        if (elements.itemEditId.value === item.id) resetItemForm();
         render();
       });
       elements.itemList.appendChild(row);
     });
+  }
+
+  function startItemEdit(item) {
+    elements.itemEditId.value = item.id;
+    elements.itemNameInput.value = item.name;
+    elements.itemCategoryInput.value = item.category;
+    elements.itemPriceInput.value = item.price;
+    elements.itemCostInput.value = item.cost || "";
+    elements.itemStockInput.value = item.stock || 0;
+    elements.itemBarcodeInput.value = item.barcode || "";
+    elements.itemTenderInput.checked = Boolean(item.tender);
+    elements.itemSubmitButton.textContent = "Save item";
+    elements.cancelItemEditButton.hidden = false;
+    elements.itemNameInput.focus();
+  }
+
+  function resetItemForm() {
+    elements.itemForm.reset();
+    elements.itemEditId.value = "";
+    elements.itemSubmitButton.textContent = "Add item";
+    elements.cancelItemEditButton.hidden = true;
   }
 
   function renderPromotions() {
@@ -1407,8 +1461,9 @@
 
   elements.itemForm.addEventListener("submit", (event) => {
     event.preventDefault();
-    state.items.push({
-      id: uid("item"),
+    const itemId = elements.itemEditId.value;
+    const item = {
+      id: itemId || uid("item"),
       name: elements.itemNameInput.value.trim(),
       category: elements.itemCategoryInput.value.trim(),
       price: Number(elements.itemPriceInput.value),
@@ -1417,10 +1472,15 @@
       storeId: state.selectedStoreId,
       barcode: elements.itemBarcodeInput.value.trim(),
       tender: elements.itemTenderInput.checked,
-    });
-    elements.itemForm.reset();
+    };
+    const existingIndex = state.items.findIndex((candidate) => candidate.id === itemId && candidate.storeId === state.selectedStoreId);
+    if (existingIndex >= 0) state.items[existingIndex] = item;
+    else state.items.push(item);
+    state.cart = state.cart.map((line) => line.id === item.id ? { ...line, ...item, qty: line.qty } : line);
+    resetItemForm();
     render();
   });
+  elements.cancelItemEditButton.addEventListener("click", resetItemForm);
 
   elements.promotionForm.addEventListener("submit", (event) => {
     event.preventDefault();
@@ -1530,6 +1590,12 @@
     setLoginRole(appMode);
     setLoginVisible(true);
     loadRemoteState();
+    if (appMode === "register") {
+      window.setInterval(refreshRemoteState, 10000);
+      document.addEventListener("visibilitychange", () => {
+        if (!document.hidden) refreshRemoteState();
+      });
+    }
   } else {
     render();
     setView(getAllowedViews()[0]);
