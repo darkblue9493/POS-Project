@@ -27,6 +27,7 @@
     manualDiscount: 0,
     cart: [],
     orders: [],
+    waste: [],
     items: [
       { id: "bonein-box-2", name: "2 Piece Bone-In Box", category: "Krunch Box Bone-In", price: 8.09, tender: false },
       { id: "bonein-box-3", name: "3 Piece Bone-In Box", category: "Krunch Box Bone-In", price: 9.59, tender: false },
@@ -113,6 +114,8 @@
     bestSellerReport: document.getElementById("bestSellerReport"),
     lowStockReport: document.getElementById("lowStockReport"),
     exportReportButton: document.getElementById("exportReportButton"),
+    wasteReportSummary: document.getElementById("wasteReportSummary"),
+    wasteReportList: document.getElementById("wasteReportList"),
     loginScreen: document.getElementById("loginScreen"),
     sleepScreen: document.getElementById("sleepScreen"),
     loginForm: document.getElementById("loginForm"),
@@ -146,6 +149,13 @@
     total: document.getElementById("total"),
     checkoutButton: document.getElementById("checkoutButton"),
     clearCartButton: document.getElementById("clearCartButton"),
+    openWasteButton: document.getElementById("openWasteButton"),
+    wasteDialog: document.getElementById("wasteDialog"),
+    wasteForm: document.getElementById("wasteForm"),
+    wasteItemSelect: document.getElementById("wasteItemSelect"),
+    wasteQuantityInput: document.getElementById("wasteQuantityInput"),
+    wasteReasonInput: document.getElementById("wasteReasonInput"),
+    cancelWasteButton: document.getElementById("cancelWasteButton"),
     ordersTableBody: document.getElementById("ordersTableBody"),
     exportOrdersButton: document.getElementById("exportOrdersButton"),
     purgeMode: document.getElementById("purgeMode"),
@@ -308,6 +318,7 @@
       merged.registers = Array.isArray(merged.registers) && merged.registers.length ? merged.registers : defaultState.registers;
       merged.promotions = Array.isArray(merged.promotions) ? merged.promotions : [];
       merged.users = Array.isArray(merged.users) ? merged.users : [];
+      merged.waste = Array.isArray(merged.waste) ? merged.waste : [];
       merged.selectedStoreId = merged.selectedStoreId || merged.stores[0].id;
       merged.selectedRegisterId = merged.selectedRegisterId || merged.registers[0].id;
       merged.items = merged.items.map((item) => ({ ...item, storeId: item.storeId || merged.stores[0].id, stock: Number(item.stock) || 0, cost: Number(item.cost) || 0, barcode: item.barcode || item.sku || item.id }));
@@ -376,6 +387,7 @@
           nextOrderNumber: state.nextOrderNumber,
           items: state.items,
           orders: state.orders,
+          waste: state.waste,
         }),
       });
     } catch (error) {
@@ -539,6 +551,7 @@
     if (!Array.isArray(state.users)) {
       state.users = [];
     }
+    if (!Array.isArray(state.waste)) state.waste = [];
     if (!state.selectedStoreId || !state.stores.some((store) => store.id === state.selectedStoreId)) {
       state.selectedStoreId = state.stores[0].id;
     }
@@ -804,6 +817,23 @@
     return orders.filter((order) => new Date(order.createdAt) >= cutoff);
   }
 
+  function getReportWaste() {
+    const range = elements.reportRange ? elements.reportRange.value : "today";
+    const entries = state.waste.filter((entry) => entry.storeId === state.selectedStoreId);
+    if (range === "all") return entries;
+    if (range === "custom") {
+      const start = elements.reportStartDate.value ? new Date(`${elements.reportStartDate.value}T00:00:00`) : null;
+      const end = elements.reportEndDate.value ? new Date(`${elements.reportEndDate.value}T23:59:59.999`) : null;
+      return entries.filter((entry) => (!start || new Date(entry.createdAt) >= start) && (!end || new Date(entry.createdAt) <= end));
+    }
+    const now = new Date();
+    if (range === "today") return entries.filter((entry) => new Date(entry.createdAt).toDateString() === now.toDateString());
+    const cutoff = new Date(now);
+    cutoff.setHours(0, 0, 0, 0);
+    cutoff.setDate(cutoff.getDate() - (Number(range) - 1));
+    return entries.filter((entry) => new Date(entry.createdAt) >= cutoff);
+  }
+
   function updateCustomRangeFields() {
     const custom = elements.reportRange.value === "custom";
     elements.customRangeFields.hidden = !custom;
@@ -860,12 +890,24 @@
     elements.reportTicketCount.textContent = String(orders.length);
     elements.reportAverageTicket.textContent = price(orders.length ? totals.sales / orders.length : 0);
     elements.reportItemsSold.textContent = String(totals.items);
+    renderWasteReport();
     const payments = Object.entries(totals.payments).sort((a, b) => b[1] - a[1]).map(([method, total]) => ({ label: method, detail: "Tender collected", value: price(total) }));
     renderReportRows(elements.paymentReport, payments, "No payments in this period");
     const sellers = [...totals.bestSellers.entries()].sort((a, b) => b[1].qty - a[1].qty || b[1].sales - a[1].sales).slice(0, 8).map(([name, item]) => ({ label: name, detail: `${item.qty} sold`, value: price(item.sales) }));
     renderReportRows(elements.bestSellerReport, sellers, "No items sold in this period");
     const lowStock = state.items.filter((item) => item.storeId === state.selectedStoreId && Number(item.stock) <= 5).sort((a, b) => Number(a.stock) - Number(b.stock)).slice(0, 8).map((item) => ({ label: item.name, detail: item.category, value: `${Number(item.stock) || 0} left` }));
     renderReportRows(elements.lowStockReport, lowStock, "No low-stock items");
+  }
+
+  function renderWasteReport() {
+    if (!elements.wasteReportList) return;
+    const entries = getReportWaste();
+    const totalQuantity = entries.reduce((sum, entry) => sum + Number(entry.quantity || 0), 0);
+    elements.wasteReportSummary.textContent = `${totalQuantity} item${totalQuantity === 1 ? "" : "s"} recorded`;
+    const totals = new Map();
+    entries.forEach((entry) => totals.set(entry.itemName, (totals.get(entry.itemName) || 0) + Number(entry.quantity || 0)));
+    const rows = [...totals.entries()].sort((first, second) => second[1] - first[1]).map(([name, quantity]) => ({ label: name, detail: "Discarded / left over", value: `${quantity} units` }));
+    renderReportRows(elements.wasteReportList, rows, "No wastage recorded in this period");
   }
 
   function getPurgeTargetOrders() {
@@ -1438,6 +1480,31 @@
     state.manualDiscount = 0;
     renderCart();
     saveState();
+  });
+  elements.openWasteButton.addEventListener("click", () => {
+    elements.wasteItemSelect.innerHTML = "";
+    getStoreItems().forEach((item) => {
+      const option = document.createElement("option");
+      option.value = item.id;
+      option.textContent = `${item.name} (${Number(item.stock) || 0} in stock)`;
+      elements.wasteItemSelect.appendChild(option);
+    });
+    if (!elements.wasteItemSelect.options.length) return;
+    elements.wasteQuantityInput.value = "1";
+    elements.wasteReasonInput.value = "";
+    elements.wasteDialog.showModal();
+  });
+  elements.cancelWasteButton.addEventListener("click", () => elements.wasteDialog.close());
+  elements.wasteForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const item = state.items.find((candidate) => candidate.id === elements.wasteItemSelect.value && candidate.storeId === state.selectedStoreId);
+    const quantity = Math.floor(Number(elements.wasteQuantityInput.value));
+    if (!item || !Number.isFinite(quantity) || quantity < 1) return;
+    state.waste.unshift({ id: uid("waste"), storeId: state.selectedStoreId, itemId: item.id, itemName: item.name, quantity, reason: elements.wasteReasonInput.value.trim(), cashierName: currentCashierName || "Cashier 1", createdAt: new Date().toISOString() });
+    item.stock = Math.max(0, (Number(item.stock) || 0) - quantity);
+    elements.wasteDialog.close();
+    render();
+    await persistNow();
   });
   elements.exportOrdersButton.addEventListener("click", () => exportOrders());
   elements.purgeMode.addEventListener("change", updatePurgeControls);

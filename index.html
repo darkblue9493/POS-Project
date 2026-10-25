@@ -196,6 +196,11 @@
               <div class="report-list" id="lowStockReport"></div>
             </section>
           </div>
+          <section class="panel-section waste-report-panel">
+            <div class="section-head"><h3>Wastage report</h3><span id="wasteReportSummary">0 items recorded</span></div>
+            <p class="backoffice-note">Discarded products are tracked separately and never appear in sales, tax, tickets, or sales exports.</p>
+            <div class="report-list" id="wasteReportList"></div>
+          </section>
         </section>
 
         <section class="view" id="registerView">
@@ -238,6 +243,7 @@
               <button type="button" class="pos-action" data-start-over>Start<br>Over</button>
               <button type="button" class="pos-action" data-show-last-receipt>Show<br>Receipt</button>
               <button type="button" class="pos-action" data-toggle-discount>Discount</button>
+              <button type="button" class="pos-action waste-action" id="openWasteButton">Wastage</button>
               <button type="button" class="pos-action" data-reprint-last>Reprint<br>Receipt</button>
             </aside>
 
@@ -484,6 +490,16 @@
         <button class="secondary-button" id="printReceiptButton" type="button">Print</button>
         <button class="primary-button" id="closeReceiptButton" type="button">Done</button>
       </div>
+    </dialog>
+
+    <dialog id="wasteDialog">
+      <form class="waste-dialog" id="wasteForm">
+        <div><p class="eyebrow">Inventory control</p><h2>Record wastage</h2><p>Record items thrown away or left over. This reduces stock only.</p></div>
+        <label><span>Item</span><select id="wasteItemSelect" required></select></label>
+        <label><span>Quantity</span><input id="wasteQuantityInput" type="number" min="1" step="1" value="1" required /></label>
+        <label><span>Reason optional</span><input id="wasteReasonInput" type="text" maxlength="100" placeholder="Left over, damaged, expired…" /></label>
+        <div class="dialog-actions"><button class="secondary-button" id="cancelWasteButton" type="button">Cancel</button><button class="primary-button" type="submit">Record wastage</button></div>
+      </form>
     </dialog>
 
     <script src="./app.js"></script>
