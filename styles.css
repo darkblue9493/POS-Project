@@ -269,6 +269,34 @@ body[data-app-mode="back-office"] .primary-button {
   gap: 14px;
 }
 
+.login-role-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.login-role {
+  min-height: 42px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: #fff;
+  color: var(--muted);
+  font-weight: 850;
+}
+
+.login-role.active {
+  border-color: #e74d3b;
+  background: #fff0ed;
+  color: #c63e31;
+}
+
+.login-help {
+  margin: -3px 0 0;
+  color: var(--muted);
+  font-size: .9rem;
+  line-height: 1.35;
+}
+
 .login-message {
   min-height: 20px;
   margin: 0;
@@ -462,6 +490,13 @@ body[data-app-mode="register"] .workspace-header {
   color: #f4f4f4;
   background: #050505;
   border: 1px solid #343434;
+}
+
+body[data-app-mode="register"] .logout-button {
+  min-height: 38px;
+  border-color: #a9ff43;
+  background: transparent;
+  color: #a9ff43;
 }
 
 body[data-app-mode="register"] .workspace-header .eyebrow {

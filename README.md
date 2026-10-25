@@ -22,7 +22,7 @@ To use it anywhere:
 1. Upload this `pos project` folder to a hosting service that runs Node apps, such as Render.
 2. Set the app start command to `npm start`.
 3. Set `REGISTER_PIN` to the PIN cashiers use.
-4. Set `BACK_OFFICE_PIN` to the manager/back-office PIN.
+4. Set `BACK_OFFICE_PIN` to the manager/back-office PIN. It defaults to `4415` when this variable is not set.
 5. Open the live website address from any register, tablet, or phone.
 
 The included `render.yaml` is ready for Render's free-friendly setup without a paid disk. The live version uses a PIN screen and shared server storage, but orders/menu can reset after redeploys or server restarts unless you add paid persistent storage later.

@@ -110,6 +110,13 @@
     loginForm: document.getElementById("loginForm"),
     pinInput: document.getElementById("pinInput"),
     loginMessage: document.getElementById("loginMessage"),
+    loginEyebrow: document.getElementById("loginEyebrow"),
+    loginTitle: document.getElementById("loginTitle"),
+    loginHelp: document.getElementById("loginHelp"),
+    loginSubmitButton: document.getElementById("loginSubmitButton"),
+    registerLoginButton: document.getElementById("registerLoginButton"),
+    managerLoginButton: document.getElementById("managerLoginButton"),
+    logoutButton: document.getElementById("logoutButton"),
     tabs: Array.from(document.querySelectorAll(".tab-button")),
     views: Array.from(document.querySelectorAll(".view")),
     orderTypeButtons: Array.from(document.querySelectorAll("[data-order-type]")),
@@ -171,6 +178,7 @@
   let hydrated = !remoteMode;
   let saveTimer = null;
   const appMode = getAppMode();
+  let loginRole = appMode;
 
   function getAppMode() {
     const mode = new URLSearchParams(location.search).get("mode");
@@ -201,6 +209,19 @@
   function setLoginVisible(visible) {
     elements.loginScreen.hidden = !visible;
     elements.loginScreen.classList.toggle("is-unlocked", !visible);
+  }
+
+  function setLoginRole(role) {
+    loginRole = role === "back-office" ? "back-office" : "register";
+    const manager = loginRole === "back-office";
+    elements.registerLoginButton.classList.toggle("active", !manager);
+    elements.managerLoginButton.classList.toggle("active", manager);
+    elements.loginEyebrow.textContent = manager ? "Manager access" : "Register access";
+    elements.loginTitle.textContent = manager ? "Vedrix Manager" : "Vedrix POS";
+    elements.loginHelp.textContent = manager ? "Enter the manager PIN to open the Vedrix manager workspace." : "Enter the register PIN. Vedrix POS will open the matching store.";
+    elements.loginSubmitButton.textContent = manager ? "Open manager" : "Open register";
+    elements.pinInput.value = "";
+    elements.loginMessage.textContent = "";
   }
 
   function loadState() {
@@ -241,7 +262,7 @@
     return data;
   }
 
-  async function loadRemoteState() {
+  async function loadRemoteState(preferredStoreId = "") {
     if (!remoteMode) return;
     try {
       const data = await api("/api/state");
@@ -249,7 +270,7 @@
         ...state,
         ...data.state,
         activeCategory: "All",
-        selectedStoreId: getRequestedStoreId() || state.selectedStoreId,
+        selectedStoreId: preferredStoreId || getRequestedStoreId() || state.selectedStoreId,
         orderType: state.orderType,
         payment: state.payment,
         cart: [],
@@ -1045,6 +1066,20 @@
   elements.exportReportButton.addEventListener("click", () => exportOrders(getReportOrders(), `pos-sales-${elements.reportRange.value}.csv`));
   elements.printReceiptButton.addEventListener("click", () => window.print());
   elements.closeReceiptButton.addEventListener("click", () => elements.receiptDialog.close());
+  elements.registerLoginButton.addEventListener("click", () => setLoginRole("register"));
+  elements.managerLoginButton.addEventListener("click", () => setLoginRole("back-office"));
+  elements.logoutButton.addEventListener("click", async () => {
+    try {
+      await api("/api/logout", { method: "POST" });
+    } catch (error) {
+      // The local login screen still protects the next operation if the session already expired.
+    }
+    hydrated = false;
+    state.cart = [];
+    setLoginRole(appMode);
+    setLoginVisible(true);
+    elements.pinInput.focus();
+  });
   document.querySelectorAll("[data-pay-ticket]").forEach((button) => button.addEventListener("click", completeOrder));
   document.querySelectorAll("[data-focus-customer]").forEach((button) => button.addEventListener("click", () => elements.customerName.focus()));
   document.querySelectorAll("[data-void-line]").forEach((button) => button.addEventListener("click", () => {
@@ -1099,12 +1134,15 @@
     event.preventDefault();
     elements.loginMessage.textContent = "Checking...";
     try {
-      await api("/api/login", {
+      const login = await api("/api/login", {
         method: "POST",
-        body: JSON.stringify({ pin: elements.pinInput.value, mode: appMode, storeId: getRequestedStoreId() }),
+        body: JSON.stringify({ pin: elements.pinInput.value, mode: loginRole, storeId: getRequestedStoreId() }),
       });
-      elements.pinInput.value = "";
-      await loadRemoteState();
+      if (loginRole === "back-office" && appMode !== "back-office") {
+        location.assign("./back-office.html");
+        return;
+      }
+      await loadRemoteState(login.storeId || "");
     } catch (error) {
       elements.loginMessage.textContent = error.message;
     }
@@ -1190,6 +1228,7 @@
   elements.paymentButtons.forEach((button) => button.classList.toggle("active", button.dataset.payment === state.payment));
   applyAppMode();
   if (remoteMode) {
+    setLoginRole(appMode);
     setLoginVisible(true);
     loadRemoteState();
   } else {

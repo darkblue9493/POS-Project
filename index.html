@@ -13,11 +13,16 @@
       <form class="login-box" id="loginForm">
         <div class="brand-mark">POS</div>
         <div>
-          <p class="eyebrow">Secure register</p>
-          <h1>Vedrix POS</h1>
+          <p class="eyebrow" id="loginEyebrow">Secure access</p>
+          <h1 id="loginTitle">Vedrix POS</h1>
         </div>
+        <div class="login-role-tabs" role="group" aria-label="Choose sign in type">
+          <button class="login-role active" id="registerLoginButton" type="button">Register</button>
+          <button class="login-role" id="managerLoginButton" type="button">Manager</button>
+        </div>
+        <p class="login-help" id="loginHelp">Enter the register PIN. Vedrix POS will open the matching store.</p>
         <input id="pinInput" type="password" inputmode="numeric" autocomplete="current-password" placeholder="Enter PIN" required />
-        <button class="checkout-button" type="submit">Unlock</button>
+        <button class="checkout-button" id="loginSubmitButton" type="submit">Open register</button>
         <p id="loginMessage" class="login-message"></p>
       </form>
     </div>
@@ -189,6 +194,7 @@
                 <button class="segment" type="button" data-order-type="pickup">Pickup</button>
                 <button class="segment" type="button" data-order-type="delivery">Delivery</button>
               </div>
+              <button class="secondary-button logout-button" id="logoutButton" type="button">Log out</button>
             </div>
           </header>
 
@@ -215,7 +221,6 @@
               <button type="button" class="pos-action" data-start-over>Start<br>Over</button>
               <button type="button" class="pos-action" data-show-last-receipt>Show<br>Receipt</button>
               <button type="button" class="pos-action" data-toggle-discount>Discount</button>
-              <a class="pos-action manager-action" href="./back-office.html">Manager<br>Menu</a>
               <button type="button" class="pos-action" data-reprint-last>Reprint<br>Receipt</button>
             </aside>
 

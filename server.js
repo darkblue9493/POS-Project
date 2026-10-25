@@ -10,7 +10,7 @@ let dbPath = path.join(dataDir, "pos-db.json");
 const port = Number(process.env.PORT || 4188);
 const posPin = String(process.env.POS_PIN || "1234");
 const registerPin = String(process.env.REGISTER_PIN || posPin);
-const backOfficePin = String(process.env.BACK_OFFICE_PIN || posPin);
+const backOfficePin = String(process.env.BACK_OFFICE_PIN || "4415");
 const sessions = new Map();
 const sessionMaxAgeMs = 1000 * 60 * 60 * 16;
 const types = {
@@ -213,18 +213,32 @@ async function handleApi(req, res, url) {
     const role = body.mode === "back-office" ? "back-office" : "register";
     const db = readDb();
     const requestedStore = db.stores.find((store) => store.id === body.storeId);
-    const expectedPin = role === "back-office" ? backOfficePin : String(requestedStore?.pin || registerPin);
-    if (String(body.pin || "") !== expectedPin) {
+    const pin = String(body.pin || "");
+    let loginStore = null;
+    if (role === "register") {
+      if (requestedStore) {
+        loginStore = requestedStore;
+      } else {
+        const matches = db.stores.filter((store) => String(store.pin || registerPin) === pin);
+        if (matches.length === 1) loginStore = matches[0];
+        if (matches.length > 1) {
+          sendJson(res, 400, { ok: false, message: "More than one store uses this PIN. Give each store a different register PIN." });
+          return;
+        }
+      }
+    }
+    const expectedPin = role === "back-office" ? backOfficePin : String(loginStore?.pin || registerPin);
+    if (pin !== expectedPin) {
       sendJson(res, 401, { ok: false, message: "Wrong PIN" });
       return;
     }
     const token = crypto.randomBytes(24).toString("hex");
-    sessions.set(token, { createdAt: Date.now(), role });
+    sessions.set(token, { createdAt: Date.now(), role, storeId: loginStore?.id || null });
     res.writeHead(200, {
       "content-type": "application/json; charset=utf-8",
       "set-cookie": `pos_session=${encodeURIComponent(token)}; HttpOnly; SameSite=Lax; Path=/; Max-Age=${Math.floor(sessionMaxAgeMs / 1000)}`
     });
-    res.end(JSON.stringify({ ok: true }));
+    res.end(JSON.stringify({ ok: true, storeId: loginStore?.id || null }));
     return;
   }
 
