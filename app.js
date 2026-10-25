@@ -113,6 +113,7 @@
     lowStockReport: document.getElementById("lowStockReport"),
     exportReportButton: document.getElementById("exportReportButton"),
     loginScreen: document.getElementById("loginScreen"),
+    sleepScreen: document.getElementById("sleepScreen"),
     loginForm: document.getElementById("loginForm"),
     pinInput: document.getElementById("pinInput"),
     loginMessage: document.getElementById("loginMessage"),
@@ -123,6 +124,7 @@
     registerLoginButton: document.getElementById("registerLoginButton"),
     managerLoginButton: document.getElementById("managerLoginButton"),
     logoutButton: document.getElementById("logoutButton"),
+    fullscreenButton: document.getElementById("fullscreenButton"),
     managerLogoutButton: document.getElementById("managerLogoutButton"),
     tabs: Array.from(document.querySelectorAll(".tab-button")),
     views: Array.from(document.querySelectorAll(".view")),
@@ -201,6 +203,9 @@
   let loginRole = appMode;
   let currentCashierName = "Cashier 1";
   let registerAudioContext = null;
+  let sleepTimer = null;
+  let registerSleeping = false;
+  const sleepAfterMs = 30 * 60 * 1000;
 
   function getAppMode() {
     const mode = new URLSearchParams(location.search).get("mode");
@@ -231,6 +236,48 @@
   function setLoginVisible(visible) {
     elements.loginScreen.hidden = !visible;
     elements.loginScreen.classList.toggle("is-unlocked", !visible);
+    if (visible) stopSleepTimer();
+    else if (appMode === "register") startSleepTimer();
+  }
+
+  function startSleepTimer() {
+    stopSleepTimer();
+    if (appMode !== "register") return;
+    sleepTimer = setTimeout(sleepRegister, sleepAfterMs);
+  }
+
+  function stopSleepTimer() {
+    clearTimeout(sleepTimer);
+    sleepTimer = null;
+  }
+
+  function sleepRegister() {
+    if (appMode !== "register" || elements.loginScreen.hidden === false) return;
+    registerSleeping = true;
+    elements.sleepScreen.hidden = false;
+    document.body.classList.add("pos-asleep");
+  }
+
+  function wakeRegister() {
+    if (!registerSleeping) return;
+    registerSleeping = false;
+    elements.sleepScreen.hidden = true;
+    document.body.classList.remove("pos-asleep");
+    startSleepTimer();
+  }
+
+  function recordRegisterActivity() {
+    if (registerSleeping || appMode !== "register" || elements.loginScreen.hidden === false) return;
+    startSleepTimer();
+  }
+
+  async function enterFullscreen() {
+    if (!document.fullscreenEnabled || document.fullscreenElement) return;
+    try {
+      await document.documentElement.requestFullscreen();
+    } catch (error) {
+      // Full-screen access remains a browser or device choice.
+    }
   }
 
   function setLoginRole(role) {
@@ -1197,8 +1244,15 @@
   elements.tabs.forEach((tab) => tab.addEventListener("click", () => setView(tab.dataset.view)));
   elements.registerView.addEventListener("click", (event) => {
     const button = event.target.closest("button");
-    if (button && !button.disabled) playRegisterClick();
+    if (button && !button.disabled) {
+      enterFullscreen();
+      playRegisterClick();
+    }
   });
+  elements.fullscreenButton.addEventListener("click", enterFullscreen);
+  elements.sleepScreen.addEventListener("click", wakeRegister);
+  document.addEventListener("pointerdown", recordRegisterActivity);
+  document.addEventListener("keydown", recordRegisterActivity);
   document.querySelectorAll("[data-add-store]").forEach((button) => {
     button.addEventListener("click", () => {
       setView("settings");
@@ -1271,6 +1325,7 @@
       // The local login screen still protects the next operation if the session already expired.
     }
     if (remoteMode) {
+      stopSleepTimer();
       location.assign("./");
       return;
     }

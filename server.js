@@ -15,7 +15,7 @@ const posPin = String(process.env.POS_PIN || "1234");
 const registerPin = String(process.env.REGISTER_PIN || posPin);
 const backOfficePin = String(process.env.BACK_OFFICE_PIN || "4415");
 const sessions = new Map();
-const sessionMaxAgeMs = 1000 * 60 * 60 * 16;
+const sessionCookieMaxAgeSeconds = 60 * 60 * 24 * 365;
 const types = {
   ".html": "text/html; charset=utf-8",
   ".css": "text/css; charset=utf-8",
@@ -139,10 +139,6 @@ function getSession(req) {
   const token = getCookie(req, "pos_session");
   const session = sessions.get(token);
   if (!session) return null;
-  if (Date.now() - session.createdAt > sessionMaxAgeMs) {
-    sessions.delete(token);
-    return null;
-  }
   return session;
 }
 
@@ -307,7 +303,7 @@ async function handleApi(req, res, url) {
     sessions.set(token, { createdAt: Date.now(), role, storeId: loginStore?.id || null, cashierName: loginUser?.name || "Cashier 1" });
     res.writeHead(200, {
       "content-type": "application/json; charset=utf-8",
-      "set-cookie": `pos_session=${encodeURIComponent(token)}; HttpOnly; SameSite=Lax; Path=/; Max-Age=${Math.floor(sessionMaxAgeMs / 1000)}`
+      "set-cookie": `pos_session=${encodeURIComponent(token)}; HttpOnly; SameSite=Lax; Path=/; Max-Age=${sessionCookieMaxAgeSeconds}`
     });
     res.end(JSON.stringify({ ok: true, storeId: loginStore?.id || null, cashierName: loginUser?.name || "Cashier 1" }));
     return;

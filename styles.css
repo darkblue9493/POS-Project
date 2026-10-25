@@ -271,6 +271,45 @@ body[data-app-mode="back-office"] .primary-button {
   display: none !important;
 }
 
+.pos-sleep-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-content: center;
+  gap: 14px;
+  width: 100%;
+  border: 0;
+  background: radial-gradient(circle at center, #1c2d3c, #080d12 70%);
+  color: #fff;
+  text-align: center;
+}
+
+.pos-sleep-screen[hidden] {
+  display: none;
+}
+
+.pos-sleep-screen strong {
+  font-size: clamp(1.6rem, 4vw, 2.4rem);
+}
+
+.pos-sleep-screen span:last-child {
+  color: #b8c6d2;
+  font-size: 1rem;
+}
+
+.sleep-mark {
+  width: 68px;
+  height: 68px;
+  display: grid;
+  place-items: center;
+  margin: 0 auto 6px;
+  border-radius: 18px;
+  background: #e74d3b;
+  font-size: 2rem;
+  font-weight: 950;
+}
+
 .login-box {
   width: min(380px, 100%);
   background: #fff;
@@ -516,6 +555,13 @@ body[data-app-mode="register"] .logout-button {
   border-color: #a9ff43;
   background: transparent;
   color: #a9ff43;
+}
+
+body[data-app-mode="register"] .fullscreen-button {
+  min-height: 38px;
+  border-color: #86c6ff;
+  background: transparent;
+  color: #86c6ff;
 }
 
 body[data-app-mode="register"] .workspace-header .eyebrow {

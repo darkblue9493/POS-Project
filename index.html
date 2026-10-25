@@ -26,6 +26,11 @@
         <p id="loginMessage" class="login-message"></p>
       </form>
     </div>
+    <button class="pos-sleep-screen" id="sleepScreen" type="button" hidden>
+      <span class="sleep-mark">V</span>
+      <strong>Vedrix POS is sleeping</strong>
+      <span>Touch anywhere to wake the register</span>
+    </button>
 
     <header class="manager-topbar" aria-label="Vedrix POS manager header">
       <a class="manager-logo" href="./back-office.html" aria-label="Vedrix POS home">VEDRIX <span>POS</span></a>
@@ -203,6 +208,7 @@
                 <button class="segment" type="button" data-order-type="pickup">Pickup</button>
                 <button class="segment" type="button" data-order-type="delivery">Delivery</button>
               </div>
+              <button class="secondary-button fullscreen-button" id="fullscreenButton" type="button">Full screen</button>
               <button class="secondary-button logout-button" id="logoutButton" type="button">Log out</button>
             </div>
           </header>
