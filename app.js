@@ -199,6 +199,7 @@
     settingsReceiptHeader: document.getElementById("settingsReceiptHeader"),
     settingsReceiptAddress: document.getElementById("settingsReceiptAddress"),
     settingsReceiptPhone: document.getElementById("settingsReceiptPhone"),
+    settingsCouponEnabled: document.getElementById("settingsCouponEnabled"),
     settingsCouponPercent: document.getElementById("settingsCouponPercent"),
     settingsCouponMessage: document.getElementById("settingsCouponMessage"),
     settingsCouponDelay: document.getElementById("settingsCouponDelay"),
@@ -493,6 +494,7 @@
   }
 
   function createCoupon(store) {
+    if (store.couponEnabled === false) return null;
     const percent = Math.max(0, Math.min(100, Number(store.couponPercent ?? 10)));
     if (!percent) return null;
     const createdAt = new Date();
@@ -526,6 +528,7 @@
     elements.settingsReceiptHeader.value = selectedStore.receiptHeader ?? selectedStore.name;
     elements.settingsReceiptAddress.value = selectedStore.receiptAddress ?? selectedStore.address ?? "";
     elements.settingsReceiptPhone.value = selectedStore.receiptPhone ?? "";
+    elements.settingsCouponEnabled.checked = selectedStore.couponEnabled !== false;
     elements.settingsCouponPercent.value = selectedStore.couponPercent ?? 10;
     elements.settingsCouponMessage.value = selectedStore.couponMessage ?? "Get {percent}% off on your next visit";
     elements.settingsCouponDelay.value = selectedStore.couponDelayHours ?? 24;
@@ -1740,6 +1743,7 @@
     selectedStore.receiptAddress = elements.settingsReceiptAddress.value.trim();
     selectedStore.address = selectedStore.receiptAddress;
     selectedStore.receiptPhone = elements.settingsReceiptPhone.value.trim();
+    selectedStore.couponEnabled = elements.settingsCouponEnabled.checked;
     selectedStore.couponPercent = Math.max(0, Math.min(100, Number(elements.settingsCouponPercent.value) || 0));
     selectedStore.couponMessage = elements.settingsCouponMessage.value.trim() || "Get {percent}% off on your next visit";
     selectedStore.couponDelayHours = Math.max(0, Number(elements.settingsCouponDelay.value) || 0);
