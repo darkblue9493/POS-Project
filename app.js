@@ -133,6 +133,8 @@
     fullscreenButton: document.getElementById("fullscreenButton"),
     managerLogoutButton: document.getElementById("managerLogoutButton"),
     tabs: Array.from(document.querySelectorAll(".tab-button")),
+    configurationTabs: Array.from(document.querySelectorAll(".configuration-tab")),
+    configurationPanels: Array.from(document.querySelectorAll("[data-configuration-panel]")),
     views: Array.from(document.querySelectorAll(".view")),
     orderTypeButtons: Array.from(document.querySelectorAll("[data-order-type]")),
     paymentButtons: Array.from(document.querySelectorAll("[data-payment]")),
@@ -1468,6 +1470,10 @@
   }
 
   elements.tabs.forEach((tab) => tab.addEventListener("click", () => setView(tab.dataset.view)));
+  elements.configurationTabs.forEach((tab) => tab.addEventListener("click", () => {
+    elements.configurationTabs.forEach((candidate) => candidate.classList.toggle("active", candidate === tab));
+    elements.configurationPanels.forEach((panel) => { panel.hidden = panel.dataset.configurationPanel !== tab.dataset.configuration; });
+  }));
   elements.registerView.addEventListener("click", (event) => {
     const button = event.target.closest("button");
     if (button && !button.disabled) {

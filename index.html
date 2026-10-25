@@ -36,7 +36,7 @@
 
     <header class="manager-topbar" aria-label="Vedrix POS manager header">
       <a class="manager-logo" href="./back-office.html" aria-label="Vedrix POS home">VEDRIX <span>POS</span></a>
-      <div class="manager-breadcrumb"><span class="menu-glyph">☰</span><span>Manager / Snapshot</span></div>
+      <div class="manager-breadcrumb"><span class="menu-glyph">◈</span><span>Vedrix Control Center</span></div>
       <div class="manager-account"><span>Store manager</span><button class="manager-logout" id="managerLogoutButton" type="button">Log out</button></div>
     </header>
 
@@ -53,10 +53,9 @@
         <nav class="nav-tabs" aria-label="POS views">
           <button class="tab-button active" type="button" data-view="dashboard" data-modes="back-office" title="Dashboard">Dashboard <span>›</span></button>
           <button class="tab-button" type="button" data-view="reports" data-modes="back-office" title="Sales reports">Sales Reports <span>›</span></button>
-          <button class="tab-button" type="button" data-view="register" data-modes="register" title="Register">Register</button>
           <button class="tab-button" type="button" data-view="orders" data-modes="register back-office" title="Orders">Orders <span>›</span></button>
           <button class="tab-button" type="button" data-view="items" data-modes="back-office" title="Inventory">Inventory <span>›</span></button>
-          <button class="tab-button" type="button" data-view="promotions" data-modes="back-office" title="Promotions">Promotions <span>›</span></button>
+          <button class="tab-button" type="button" data-view="promotions" data-modes="back-office" title="Discounts and coupons">Discounts &amp; Coupons <span>›</span></button>
           <button class="tab-button" type="button" data-view="settings" data-modes="back-office" title="Settings">Configuration <span>›</span></button>
         </nav>
 
@@ -405,7 +404,13 @@
               <p class="configuration-description">Manage the selected store below. Store creation and deletion stay available for your whole organization.</p>
             </div>
           </header>
-          <section class="configuration-group">
+          <div class="configuration-tabs" role="tablist" aria-label="Configuration sections">
+            <button class="configuration-tab active" type="button" data-configuration="store">Store &amp; receipts</button>
+            <button class="configuration-tab" type="button" data-configuration="organization">Stores</button>
+            <button class="configuration-tab" type="button" data-configuration="cashiers">Cashiers</button>
+            <button class="configuration-tab" type="button" data-configuration="terminals">Terminals</button>
+          </div>
+          <section class="configuration-group" data-configuration-panel="store">
             <div class="configuration-group-heading"><span>Selected store</span><strong id="configurationStoreName"></strong></div>
           <form class="settings-form" id="settingsForm">
             <label>
@@ -433,7 +438,7 @@
             <button class="primary-button" type="submit">Save settings</button>
           </form>
           </section>
-          <section class="configuration-group">
+          <section class="configuration-group" data-configuration-panel="organization" hidden>
             <div class="configuration-group-heading"><span>Organization stores</span><p>Create, open, edit, secure, or permanently delete a store.</p></div>
           <form class="settings-form" id="storeForm">
             <label>
@@ -452,7 +457,7 @@
           </form>
           <div class="item-list" id="storeList"></div>
           </section>
-          <section class="configuration-group">
+          <section class="configuration-group" data-configuration-panel="cashiers" hidden>
             <div class="configuration-group-heading"><span>Cashier access for selected store</span><p>Cashiers created here sign into the store currently selected in the manager.</p></div>
           <form class="settings-form" id="userForm">
             <h3>Cashier access</h3>
@@ -472,7 +477,7 @@
           </form>
           <div class="item-list" id="userList"></div>
           </section>
-          <section class="configuration-group">
+          <section class="configuration-group" data-configuration-panel="terminals" hidden>
             <div class="configuration-group-heading"><span>Register terminals for selected store</span><p>Create and manage the terminals used at this location.</p></div>
           <form class="settings-form" id="registerForm">
             <label>

@@ -40,7 +40,7 @@ body[data-app-mode="back-office"] .manager-topbar {
   align-items: center;
   gap: 36px;
   padding: 0 32px;
-  background: linear-gradient(110deg, #e74d3b, #ce3c32);
+  background: linear-gradient(110deg, #102a3a, #183f53);
   color: #fff;
   box-shadow: 0 2px 9px rgba(71, 28, 25, .2);
 }
@@ -143,8 +143,8 @@ body[data-app-mode="back-office"] .tab-button:hover {
 
 body[data-app-mode="back-office"] .tab-button.active {
   background: #e8eef4;
-  color: #d24435;
-  box-shadow: inset 3px 0 #e74d3b;
+  color: #087a61;
+  box-shadow: inset 3px 0 #14a67a;
 }
 
 body[data-app-mode="back-office"] .status-panel {
@@ -250,7 +250,7 @@ body[data-app-mode="back-office"] .report-row {
 }
 
 body[data-app-mode="back-office"] .primary-button {
-  background: #e14b3b;
+  background: #087a61;
 }
 
 .item-row-actions {
@@ -262,6 +262,31 @@ body[data-app-mode="back-office"] .primary-button {
 
 .configuration-group {
   margin: 0 0 24px;
+}
+
+.configuration-tabs {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  margin: 0 0 20px;
+  padding-bottom: 3px;
+}
+
+.configuration-tab {
+  flex: 0 0 auto;
+  min-height: 42px;
+  padding: 0 15px;
+  border: 1px solid #d5e0e8;
+  border-radius: 22px;
+  background: #fff;
+  color: #466175;
+  font-weight: 800;
+}
+
+.configuration-tab.active {
+  border-color: #087a61;
+  background: #087a61;
+  color: #fff;
 }
 
 .configuration-group-heading {
