@@ -145,6 +145,13 @@
     clearCartButton: document.getElementById("clearCartButton"),
     ordersTableBody: document.getElementById("ordersTableBody"),
     exportOrdersButton: document.getElementById("exportOrdersButton"),
+    purgeMode: document.getElementById("purgeMode"),
+    purgeBeforeLabel: document.getElementById("purgeBeforeLabel"),
+    purgeBeforeDate: document.getElementById("purgeBeforeDate"),
+    purgeMonthLabel: document.getElementById("purgeMonthLabel"),
+    purgeMonth: document.getElementById("purgeMonth"),
+    purgePreview: document.getElementById("purgePreview"),
+    deleteOldOrdersButton: document.getElementById("deleteOldOrdersButton"),
     itemForm: document.getElementById("itemForm"),
     itemNameInput: document.getElementById("itemNameInput"),
     itemCategoryInput: document.getElementById("itemCategoryInput"),
@@ -407,6 +414,7 @@
     renderPromotions();
     renderDashboard();
     renderReports();
+    renderPurgePreview();
     saveState();
   }
 
@@ -699,6 +707,52 @@
     renderReportRows(elements.bestSellerReport, sellers, "No items sold in this period");
     const lowStock = state.items.filter((item) => item.storeId === state.selectedStoreId && Number(item.stock) <= 5).sort((a, b) => Number(a.stock) - Number(b.stock)).slice(0, 8).map((item) => ({ label: item.name, detail: item.category, value: `${Number(item.stock) || 0} left` }));
     renderReportRows(elements.lowStockReport, lowStock, "No low-stock items");
+  }
+
+  function getPurgeTargetOrders() {
+    const storeOrders = state.orders.filter((order) => (order.storeId || state.selectedStoreId) === state.selectedStoreId);
+    if (elements.purgeMode.value === "before") {
+      if (!elements.purgeBeforeDate.value) return [];
+      const cutoff = new Date(`${elements.purgeBeforeDate.value}T00:00:00`);
+      return storeOrders.filter((order) => new Date(order.createdAt) < cutoff);
+    }
+    if (!elements.purgeMonth.value) return [];
+    const [year, month] = elements.purgeMonth.value.split("-").map(Number);
+    const start = new Date(year, month - 1, 1);
+    const end = new Date(year, month, 1);
+    return storeOrders.filter((order) => new Date(order.createdAt) >= start && new Date(order.createdAt) < end);
+  }
+
+  function updatePurgeControls() {
+    const byMonth = elements.purgeMode.value === "month";
+    elements.purgeBeforeLabel.hidden = byMonth;
+    elements.purgeMonthLabel.hidden = !byMonth;
+    renderPurgePreview();
+  }
+
+  function renderPurgePreview() {
+    if (!elements.purgeMode || appMode !== "back-office") return;
+    const targetOrders = getPurgeTargetOrders();
+    const hasSelection = elements.purgeMode.value === "month" ? Boolean(elements.purgeMonth.value) : Boolean(elements.purgeBeforeDate.value);
+    elements.deleteOldOrdersButton.disabled = !hasSelection || targetOrders.length === 0;
+    elements.deleteOldOrdersButton.textContent = `Delete ${targetOrders.length} receipt${targetOrders.length === 1 ? "" : "s"}`;
+    if (!hasSelection) {
+      elements.purgePreview.textContent = "Choose a date or month to review matching receipts.";
+      return;
+    }
+    elements.purgePreview.textContent = targetOrders.length ? `${targetOrders.length} receipt${targetOrders.length === 1 ? "" : "s"} will be permanently deleted from this store.` : "No receipts match this selection.";
+  }
+
+  async function deleteOldOrders() {
+    if (appMode !== "back-office") return;
+    const targetOrders = getPurgeTargetOrders();
+    if (!targetOrders.length) return;
+    const count = targetOrders.length;
+    if (!window.confirm(`Delete ${count} completed receipt${count === 1 ? "" : "s"}? This cannot be undone.`)) return;
+    const targets = new Set(targetOrders.map((order) => order.id));
+    state.orders = state.orders.filter((order) => !targets.has(order.id));
+    render();
+    await persistNow();
   }
 
   function renderDashboard() {
@@ -1159,6 +1213,10 @@
     saveState();
   });
   elements.exportOrdersButton.addEventListener("click", () => exportOrders());
+  elements.purgeMode.addEventListener("change", updatePurgeControls);
+  elements.purgeBeforeDate.addEventListener("change", renderPurgePreview);
+  elements.purgeMonth.addEventListener("change", renderPurgePreview);
+  elements.deleteOldOrdersButton.addEventListener("click", deleteOldOrders);
   elements.reportRange.addEventListener("change", () => { updateCustomRangeFields(); renderReports(); });
   elements.reportStartDate.addEventListener("change", renderReports);
   elements.reportEndDate.addEventListener("change", renderReports);

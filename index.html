@@ -306,6 +306,32 @@
               <tbody id="ordersTableBody"></tbody>
             </table>
           </div>
+          <section class="retention-panel manager-only" aria-labelledby="retentionTitle">
+            <div>
+              <p class="eyebrow">Manager only</p>
+              <h3 id="retentionTitle">Delete old sales data</h3>
+              <p>Deletes completed receipts only. Stores, menu items, inventory, cashiers, and settings stay unchanged.</p>
+            </div>
+            <div class="retention-controls">
+              <label>
+                <span>Delete</span>
+                <select id="purgeMode">
+                  <option value="before">All receipts before a date</option>
+                  <option value="month">Receipts in one month</option>
+                </select>
+              </label>
+              <label id="purgeBeforeLabel">
+                <span>Before</span>
+                <input id="purgeBeforeDate" type="date" />
+              </label>
+              <label id="purgeMonthLabel" hidden>
+                <span>Month</span>
+                <input id="purgeMonth" type="month" />
+              </label>
+              <button class="secondary-button danger-button" id="deleteOldOrdersButton" type="button" disabled>Delete 0 receipts</button>
+            </div>
+            <p class="retention-preview" id="purgePreview">Choose a date or month to review matching receipts.</p>
+          </section>
         </section>
 
         <section class="view" id="itemsView">
