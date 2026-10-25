@@ -6,6 +6,10 @@ services:
     buildCommand: npm install
     startCommand: npm start
     envVars:
+      - key: SUPABASE_URL
+        value: https://hlgjrgabubyqazxeqyaz.supabase.co
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
       - key: POS_PIN
         sync: false
       - key: REGISTER_PIN

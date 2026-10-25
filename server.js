@@ -7,6 +7,9 @@ const crypto = require("crypto");
 const root = __dirname;
 let dataDir = process.env.DATA_DIR || path.join(root, "data");
 let dbPath = path.join(dataDir, "pos-db.json");
+const supabaseUrl = String(process.env.SUPABASE_URL || "").replace(/\/+$/, "");
+const supabaseServiceRoleKey = String(process.env.SUPABASE_SERVICE_ROLE_KEY || "");
+const supabaseEnabled = Boolean(supabaseUrl && supabaseServiceRoleKey);
 const port = Number(process.env.PORT || 4188);
 const posPin = String(process.env.POS_PIN || "1234");
 const registerPin = String(process.env.REGISTER_PIN || posPin);
@@ -181,9 +184,7 @@ function withBarcodes(db) {
   };
 }
 
-function readDb() {
-  ensureDataFile();
-  const saved = JSON.parse(fs.readFileSync(dbPath, "utf8"));
+function normalizeDb(saved) {
   if (saved.menuVersion !== defaultDb.menuVersion) {
     const migratedSettings = { ...defaultDb.settings, ...saved.settings };
     if (!saved.settings || saved.settings.storeName === "Tender House") {
@@ -209,16 +210,67 @@ function readDb() {
   });
 }
 
-function writeDb(db) {
+function readDbFile() {
   ensureDataFile();
-  fs.writeFileSync(dbPath, JSON.stringify(db, null, 2));
+  const saved = JSON.parse(fs.readFileSync(dbPath, "utf8"));
+  return normalizeDb(saved);
+}
+
+function writeDbFile(db) {
+  ensureDataFile();
+  const temporaryPath = `${dbPath}.${process.pid}.tmp`;
+  fs.writeFileSync(temporaryPath, JSON.stringify(db, null, 2));
+  fs.renameSync(temporaryPath, dbPath);
+}
+
+async function supabaseRequest(pathname, options = {}) {
+  const response = await fetch(`${supabaseUrl}${pathname}`, {
+    ...options,
+    headers: {
+      apikey: supabaseServiceRoleKey,
+      authorization: `Bearer ${supabaseServiceRoleKey}`,
+      "content-type": "application/json",
+      ...(options.headers || {})
+    }
+  });
+  if (!response.ok) throw new Error(`Supabase storage request failed (${response.status})`);
+  return response;
+}
+
+async function writeSupabaseState(db) {
+  await supabaseRequest("/rest/v1/pos_state", {
+    method: "POST",
+    headers: { Prefer: "resolution=merge-duplicates,return=minimal" },
+    body: JSON.stringify([{ id: "primary", state: db, updated_at: new Date().toISOString() }])
+  });
+}
+
+async function readDb() {
+  if (!supabaseEnabled) return readDbFile();
+  try {
+    const response = await supabaseRequest("/rest/v1/pos_state?id=eq.primary&select=state");
+    const rows = await response.json();
+    if (rows[0]?.state) return normalizeDb(rows[0].state);
+    const legacyState = readDbFile();
+    await writeSupabaseState(legacyState);
+    return legacyState;
+  } catch (error) {
+    console.error(`Supabase storage unavailable; using local storage: ${error.message}`);
+    return readDbFile();
+  }
+}
+
+async function writeDb(db) {
+  writeDbFile(db);
+  if (!supabaseEnabled) return;
+  await writeSupabaseState(db);
 }
 
 async function handleApi(req, res, url) {
   if (req.method === "POST" && url.pathname === "/api/login") {
     const body = await readBody(req);
     const role = body.mode === "back-office" ? "back-office" : "register";
-    const db = readDb();
+    const db = await readDb();
     const requestedStore = db.stores.find((store) => store.id === body.storeId);
     const pin = String(body.pin || "");
     let loginStore = null;
@@ -278,13 +330,13 @@ async function handleApi(req, res, url) {
 
   if (req.method === "GET" && url.pathname === "/api/state") {
     const session = getSession(req);
-    sendJson(res, 200, { ok: true, state: readDb(), session: { role: session?.role, storeId: session?.storeId, cashierName: session?.cashierName || "Cashier 1" } });
+    sendJson(res, 200, { ok: true, state: await readDb(), session: { role: session?.role, storeId: session?.storeId, cashierName: session?.cashierName || "Cashier 1" } });
     return;
   }
 
   if (req.method === "PUT" && url.pathname === "/api/state") {
     const body = await readBody(req);
-    writeDb({
+    await writeDb({
       menuVersion: body.menuVersion || defaultDb.menuVersion,
       stores: Array.isArray(body.stores) && body.stores.length ? body.stores : defaultDb.stores,
       registers: Array.isArray(body.registers) && body.registers.length ? body.registers : defaultDb.registers,
