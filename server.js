@@ -186,9 +186,25 @@ function withBarcodes(db) {
 
 function cdbBarcodeFor(item) {
   const saved = String(item.barcode || item.sku || "");
+  const retailBarcode = retailEan13BarcodeFor(item);
+  // Move only the old Vedrix-generated UPC labels to the new retail EAN-13
+  // catalog. A barcode typed or scanned by the manager remains untouched.
+  if (retailBarcode && (!saved || saved === item.id || saved === legacyCdbBarcodeFor(item))) return retailBarcode;
   if (saved && saved !== item.id) return saved;
+  return retailBarcode || item.id;
+}
+
+function retailEan13BarcodeFor(item) {
   const index = defaultDb.items.findIndex((candidate) => candidate.id === item.id);
-  if (index < 0) return saved || item.id;
+  if (index < 0) return "";
+  const base = String(899011000609 + index);
+  const sum = base.split("").reduce((total, digit, position) => total + Number(digit) * (position % 2 === 0 ? 1 : 3), 0);
+  return `${base}${(10 - (sum % 10)) % 10}`;
+}
+
+function legacyCdbBarcodeFor(item) {
+  const index = defaultDb.items.findIndex((candidate) => candidate.id === item.id);
+  if (index < 0) return "";
   const lookup = `4${String(index + 1).padStart(10, "0")}`;
   const sum = lookup.split("").reduce((total, digit, position) => total + Number(digit) * (position % 2 === 0 ? 3 : 1), 0);
   return `${lookup}${(10 - (sum % 10)) % 10}`;

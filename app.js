@@ -1255,6 +1255,7 @@
 
   function receiptBarcodeValue(item) {
     const savedCode = String(item.barcode || item.sku || "").replace(/\D/g, "");
+    if (savedCode.length === 13) return savedCode;
     if (savedCode.length === 12) return savedCode;
     if (savedCode.length === 11) return `${savedCode}${upcCheckDigit(savedCode)}`;
     const seed = String(item.id || item.name || "POS-ITEM");
@@ -1273,7 +1274,14 @@
   function barcodeSvg(item) {
     const patterns = ["0001101", "0011001", "0010011", "0111101", "0100011", "0110001", "0101111", "0111011", "0110111", "0001011"];
     const value = receiptBarcodeValue(item);
-    const bits = `101${value.slice(0, 6).split("").map((digit) => patterns[Number(digit)]).join("")}01010${value.slice(6).split("").map((digit) => patterns[Number(digit)].split("").map((bit) => bit === "1" ? "0" : "1").join("")).join("")}101`;
+    const eanParity = ["LLLLLL", "LLGLGG", "LLGGLG", "LLGGGL", "LGLLGG", "LGGLLG", "LGGGLL", "LGLGLG", "LGLGGL", "LGGLGL"];
+    const invert = (pattern) => pattern.split("").map((bit) => bit === "1" ? "0" : "1").join("");
+    const isEan13 = value.length === 13;
+    const leftDigits = isEan13 ? value.slice(1, 7) : value.slice(0, 6);
+    const rightDigits = isEan13 ? value.slice(7) : value.slice(6);
+    const parity = isEan13 ? eanParity[Number(value[0])] : "LLLLLL";
+    const leftBits = leftDigits.split("").map((digit, position) => parity[position] === "G" ? invert(patterns[Number(digit)]) : patterns[Number(digit)]).join("");
+    const bits = `101${leftBits}01010${rightDigits.split("").map((digit) => invert(patterns[Number(digit)])).join("")}101`;
     const guardPositions = new Set([0, 1, 2, 45, 46, 47, 48, 49, 92, 93, 94]);
     const bars = [];
     let index = 0;
@@ -1287,7 +1295,9 @@
       }
       bars.push(`<rect x="${12 + start * 2}" y="2" width="${(index - start) * 2}" height="${guard ? 48 : 40}"/>`);
     }
-    const digitText = `<text x="2" y="62">${value[0]}</text><text x="30" y="62">${value.slice(1, 6)}</text><text x="142" y="62">${value.slice(6, 11)}</text><text x="214" y="62">${value[11]}</text>`;
+    const digitText = isEan13
+      ? `<text x="2" y="62">${value[0]}</text><text x="30" y="62">${value.slice(1, 7)}</text><text x="142" y="62">${value.slice(7)}</text>`
+      : `<text x="2" y="62">${value[0]}</text><text x="30" y="62">${value.slice(1, 6)}</text><text x="142" y="62">${value.slice(6, 11)}</text><text x="214" y="62">${value[11]}</text>`;
     return `<svg class="receipt-barcode" viewBox="0 0 230 66" role="img" aria-label="UPC barcode ${value}">${bars.join("")}${digitText}</svg>`;
   }
 
