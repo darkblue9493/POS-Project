@@ -996,17 +996,15 @@ dialog::backdrop {
 
 .receipt-barcode {
   display: block;
-  width: min(100%, 330px);
-  height: 42px;
+  width: min(100%, 230px);
+  height: 66px;
   margin: 0 auto;
   fill: #111;
 }
 
-.receipt-item-barcode span {
-  display: block;
-  font-size: .68rem;
-  letter-spacing: .08em;
-  word-break: break-all;
+.receipt-barcode text {
+  font: 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  letter-spacing: 1px;
 }
 
 .dialog-actions {

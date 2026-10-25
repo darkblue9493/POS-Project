@@ -687,7 +687,7 @@
     if (!code) return;
     const item = state.items.find((candidate) =>
       candidate.storeId === state.selectedStoreId &&
-      [candidate.barcode, candidate.sku, candidate.id].some((candidateCode) => normalizeBarcode(candidateCode) === code)
+      [candidate.barcode, candidate.sku, candidate.id, receiptBarcodeValue(candidate)].some((candidateCode) => normalizeBarcode(candidateCode) === code)
     );
     if (!item) {
       elements.barcodeScanInput.value = "";
@@ -802,7 +802,6 @@
             </div>
             <div class="receipt-item-barcode">
               ${barcodeSvg(item)}
-              <span>${escapeHtml(receiptBarcodeValue(item))}</span>
             </div>
           `
         )
@@ -819,35 +818,41 @@
   }
 
   function receiptBarcodeValue(item) {
-    const candidate = String(item.barcode || item.sku || item.id || "").trim().toUpperCase();
-    if (candidate && /^[0-9A-Z .\-$\/+%]+$/.test(candidate)) return candidate;
-    return String(item.id || "POS-ITEM").replace(/[^0-9A-Z-]/gi, "-").toUpperCase();
+    const savedCode = String(item.barcode || item.sku || "").replace(/\D/g, "");
+    if (savedCode.length === 12) return savedCode;
+    if (savedCode.length === 11) return `${savedCode}${upcCheckDigit(savedCode)}`;
+    const seed = String(item.id || item.name || "POS-ITEM");
+    let hash = 0;
+    for (const character of seed) hash = (hash * 31 + character.charCodeAt(0)) % 100000000000;
+    const base = String(Math.floor(hash)).padStart(11, "0");
+    return `${base}${upcCheckDigit(base)}`;
+  }
+
+  function upcCheckDigit(value) {
+    const digits = String(value).replace(/\D/g, "").slice(0, 11);
+    const sum = digits.split("").reduce((total, digit, index) => total + Number(digit) * (index % 2 === 0 ? 3 : 1), 0);
+    return String((10 - (sum % 10)) % 10);
   }
 
   function barcodeSvg(item) {
-    const patterns = {
-      "0": "nnnwwnwnn", "1": "wnnwnnnnw", "2": "nnwwnnnnw", "3": "wnwwnnnnn", "4": "nnnwwnnnw",
-      "5": "wnnwwnnnn", "6": "nnwwwnnnn", "7": "nnnwnnwnw", "8": "wnnwnnwnn", "9": "nnwwnnwnn",
-      "A": "wnnnnwnnw", "B": "nnwnnwnnw", "C": "wnwnnwnnn", "D": "nnnnwwnnw", "E": "wnnnwwnnn",
-      "F": "nnwnwwnnn", "G": "nnnnnwwnw", "H": "wnnnnwwnn", "I": "nnwnnwwnn", "J": "nnnnwwwnn",
-      "K": "wnnnnnnww", "L": "nnwnnnnww", "M": "wnwnnnnwn", "N": "nnnnwnnww", "O": "wnnnwnnwn",
-      "P": "nnwnwnnwn", "Q": "nnnnnnwww", "R": "wnnnnnwwn", "S": "nnwnnnwwn", "T": "nnnnwnwwn",
-      "U": "wwnnnnnnw", "V": "nwwnnnnnw", "W": "wwwnnnnnn", "X": "nwnnwnnnw", "Y": "wwnnwnnnn",
-      "Z": "nwwnwnnnn", "-": "nwnnnnwnw", ".": "wwnnnnwnn", " ": "nwwnnnwnn", "$": "nwnwnwnnn",
-      "/": "nwnwnnnwn", "+": "nwnnnwnwn", "%": "nnnwnwnwn", "*": "nwnnwnwnn"
-    };
-    const content = `*${receiptBarcodeValue(item)}*`;
+    const patterns = ["0001101", "0011001", "0010011", "0111101", "0100011", "0110001", "0101111", "0111011", "0110111", "0001011"];
+    const value = receiptBarcodeValue(item);
+    const bits = `101${value.slice(0, 6).split("").map((digit) => patterns[Number(digit)]).join("")}01010${value.slice(6).split("").map((digit) => patterns[Number(digit)].split("").map((bit) => bit === "1" ? "0" : "1").join("")).join("")}101`;
+    const guardPositions = new Set([0, 1, 2, 45, 46, 47, 48, 49, 92, 93, 94]);
     const bars = [];
-    let position = 14;
-    for (const character of content) {
-      patterns[character].split("").forEach((widthType, index) => {
-        const width = widthType === "w" ? 5 : 2;
-        if (index % 2 === 0) bars.push(`<rect x="${position}" y="2" width="${width}" height="42"/>`);
-        position += width;
-      });
-      position += 2;
+    let index = 0;
+    while (index < bits.length) {
+      if (bits[index] === "0") { index += 1; continue; }
+      const start = index;
+      let guard = guardPositions.has(index);
+      while (index < bits.length && bits[index] === "1") {
+        guard = guard || guardPositions.has(index);
+        index += 1;
+      }
+      bars.push(`<rect x="${12 + start * 2}" y="2" width="${(index - start) * 2}" height="${guard ? 48 : 40}"/>`);
     }
-    return `<svg class="receipt-barcode" viewBox="0 0 ${position + 14} 46" role="img" aria-label="Barcode ${escapeHtml(receiptBarcodeValue(item))}">${bars.join("")}</svg>`;
+    const digitText = `<text x="2" y="62">${value[0]}</text><text x="30" y="62">${value.slice(1, 6)}</text><text x="142" y="62">${value.slice(6, 11)}</text><text x="214" y="62">${value[11]}</text>`;
+    return `<svg class="receipt-barcode" viewBox="0 0 230 66" role="img" aria-label="UPC barcode ${value}">${bars.join("")}${digitText}</svg>`;
   }
 
   function renderOrders() {
