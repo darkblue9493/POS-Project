@@ -1481,6 +1481,16 @@ dialog::backdrop {
   margin: 0 0 10px;
 }
 
+.receipt h3 {
+  text-align: center;
+  letter-spacing: .03em;
+}
+
+.receipt > p:last-child {
+  margin-top: 16px;
+  text-align: center;
+}
+
 .receipt-line {
   display: flex;
   justify-content: space-between;
