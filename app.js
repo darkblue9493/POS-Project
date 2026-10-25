@@ -12,6 +12,7 @@
       { id: "main-register", name: "Main Register", storeId: "thomaston-raceway" },
     ],
     promotions: [],
+    users: [],
     settings: {
       storeName: "Thomaston Raceway",
       taxRate: 8.25,
@@ -85,6 +86,7 @@
 
   const elements = {
     storeName: document.getElementById("storeName"),
+    registerStoreName: document.getElementById("registerStoreName"),
     modeLabel: document.getElementById("modeLabel"),
     storeSelect: document.getElementById("storeSelect"),
     todaySales: document.getElementById("todaySales"),
@@ -117,6 +119,7 @@
     registerLoginButton: document.getElementById("registerLoginButton"),
     managerLoginButton: document.getElementById("managerLoginButton"),
     logoutButton: document.getElementById("logoutButton"),
+    managerLogoutButton: document.getElementById("managerLogoutButton"),
     tabs: Array.from(document.querySelectorAll(".tab-button")),
     views: Array.from(document.querySelectorAll(".view")),
     orderTypeButtons: Array.from(document.querySelectorAll("[data-order-type]")),
@@ -161,6 +164,12 @@
     settingsStoreName: document.getElementById("settingsStoreName"),
     settingsTaxRate: document.getElementById("settingsTaxRate"),
     settingsReceiptFooter: document.getElementById("settingsReceiptFooter"),
+    settingsReceiptHeader: document.getElementById("settingsReceiptHeader"),
+    userForm: document.getElementById("userForm"),
+    newUserNameInput: document.getElementById("newUserNameInput"),
+    newUserPinInput: document.getElementById("newUserPinInput"),
+    newUserStoreSelect: document.getElementById("newUserStoreSelect"),
+    userList: document.getElementById("userList"),
     receiptDialog: document.getElementById("receiptDialog"),
     receiptContent: document.getElementById("receiptContent"),
     printReceiptButton: document.getElementById("printReceiptButton"),
@@ -233,6 +242,7 @@
       merged.stores = merged.stores.map((store) => ({ ...store, pin: String(store.pin || "1234") }));
       merged.registers = Array.isArray(merged.registers) && merged.registers.length ? merged.registers : defaultState.registers;
       merged.promotions = Array.isArray(merged.promotions) ? merged.promotions : [];
+      merged.users = Array.isArray(merged.users) ? merged.users : [];
       merged.selectedStoreId = merged.selectedStoreId || merged.stores[0].id;
       merged.selectedRegisterId = merged.selectedRegisterId || merged.registers[0].id;
       merged.items = merged.items.map((item) => ({ ...item, storeId: item.storeId || merged.stores[0].id, stock: Number(item.stock) || 0, cost: Number(item.cost) || 0, barcode: item.barcode || item.sku || item.id }));
@@ -296,6 +306,7 @@
           stores: state.stores,
           registers: state.registers,
           promotions: state.promotions,
+          users: state.users,
           nextOrderNumber: state.nextOrderNumber,
           items: state.items,
           orders: state.orders,
@@ -366,15 +377,18 @@
     ensureSelectedStore();
     const selectedStore = getSelectedStore();
     elements.storeName.textContent = selectedStore.name;
+    elements.registerStoreName.textContent = selectedStore.name;
     elements.modeLabel.textContent = remoteMode ? "Shared mode" : "Local mode";
     elements.ticketNumber.textContent = `Order #${state.nextOrderNumber}`;
     elements.settingsStoreName.value = selectedStore.name;
     elements.settingsTaxRate.value = selectedStore.taxRate ?? state.settings.taxRate;
     elements.settingsReceiptFooter.value = selectedStore.receiptFooter ?? state.settings.receiptFooter;
+    elements.settingsReceiptHeader.value = selectedStore.receiptHeader ?? selectedStore.name;
     renderCategories();
     renderStoreSelect();
     renderStoreList();
     renderRegisterControls();
+    renderUserControls();
     renderMenu();
     renderCart();
     renderOrders();
@@ -394,6 +408,9 @@
     }
     if (!Array.isArray(state.promotions)) {
       state.promotions = [];
+    }
+    if (!Array.isArray(state.users)) {
+      state.users = [];
     }
     if (!state.selectedStoreId || !state.stores.some((store) => store.id === state.selectedStoreId)) {
       state.selectedStoreId = state.stores[0].id;
@@ -494,6 +511,7 @@
     state.stores = state.stores.filter((candidate) => candidate.id !== storeId);
     state.items = state.items.filter((item) => item.storeId !== storeId);
     state.registers = state.registers.filter((register) => register.storeId !== storeId);
+    state.users = state.users.filter((user) => user.storeId !== storeId);
     state.orders = state.orders.filter((order) => order.storeId !== storeId);
     if (state.selectedStoreId === storeId) {
       state.selectedStoreId = state.stores[0].id;
@@ -535,6 +553,36 @@
         render();
       });
       elements.registerList.appendChild(row);
+    });
+  }
+
+  function renderUserControls() {
+    elements.newUserStoreSelect.innerHTML = "";
+    state.stores.forEach((store) => {
+      const option = document.createElement("option");
+      option.value = store.id;
+      option.textContent = store.name;
+      option.selected = store.id === state.selectedStoreId;
+      elements.newUserStoreSelect.appendChild(option);
+    });
+    elements.userList.innerHTML = "";
+    const users = state.users.filter((user) => user.storeId === state.selectedStoreId);
+    if (!users.length) {
+      const empty = document.createElement("div");
+      empty.className = "empty-state";
+      empty.textContent = "No cashier accounts for this store yet";
+      elements.userList.appendChild(empty);
+      return;
+    }
+    users.forEach((user) => {
+      const row = document.createElement("div");
+      row.className = "item-list-row";
+      row.innerHTML = `<div><strong>${escapeHtml(user.name)}</strong><div class="line-meta">Cashier access for this store</div></div><span>PIN protected</span><button class="secondary-button danger-button" type="button">Remove</button>`;
+      row.querySelector("button").addEventListener("click", () => {
+        state.users = state.users.filter((candidate) => candidate.id !== user.id);
+        render();
+      });
+      elements.userList.appendChild(row);
     });
   }
 
@@ -780,6 +828,7 @@
       customer: elements.customerName.value.trim() || "Walk-in",
       storeId: state.selectedStoreId,
       storeName: getSelectedStore().name,
+      receiptHeader: getSelectedStore().receiptHeader || getSelectedStore().name,
       registerId: state.selectedRegisterId,
       registerName: getSelectedRegister().name,
       orderType: state.orderType,
@@ -811,7 +860,7 @@
   function showReceipt(order) {
     const selectedStore = getSelectedStore();
     elements.receiptContent.innerHTML = `
-      <h3>${escapeHtml(order.storeName || selectedStore.name)}</h3>
+      <h3>${escapeHtml(order.receiptHeader || order.storeName || selectedStore.receiptHeader || selectedStore.name)}</h3>
       <p>Order #${order.id}<br>${new Date(order.createdAt).toLocaleString()}<br>${escapeHtml(order.customer)}<br>${escapeHtml(order.storeName || getSelectedStore().name)} / ${escapeHtml(order.registerName || getSelectedRegister().name)}<br>${escapeHtml(order.source || "In Store")}</p>
       ${order.note ? `<p>Note: ${escapeHtml(order.note)}</p>` : ""}
       ${order.items
@@ -1068,7 +1117,11 @@
   elements.closeReceiptButton.addEventListener("click", () => elements.receiptDialog.close());
   elements.registerLoginButton.addEventListener("click", () => setLoginRole("register"));
   elements.managerLoginButton.addEventListener("click", () => setLoginRole("back-office"));
-  elements.logoutButton.addEventListener("click", async () => {
+  async function logout() {
+    if (remoteMode && hydrated) {
+      clearTimeout(saveTimer);
+      await saveRemoteState();
+    }
     try {
       await api("/api/logout", { method: "POST" });
     } catch (error) {
@@ -1079,7 +1132,9 @@
     setLoginRole(appMode);
     setLoginVisible(true);
     elements.pinInput.focus();
-  });
+  }
+  elements.logoutButton.addEventListener("click", logout);
+  elements.managerLogoutButton.addEventListener("click", logout);
   document.querySelectorAll("[data-pay-ticket]").forEach((button) => button.addEventListener("click", completeOrder));
   document.querySelectorAll("[data-focus-customer]").forEach((button) => button.addEventListener("click", () => elements.customerName.focus()));
   document.querySelectorAll("[data-void-line]").forEach((button) => button.addEventListener("click", () => {
@@ -1190,9 +1245,26 @@
     selectedStore.name = elements.settingsStoreName.value.trim() || selectedStore.name;
     selectedStore.taxRate = Number(elements.settingsTaxRate.value) || 0;
     selectedStore.receiptFooter = elements.settingsReceiptFooter.value.trim();
+    selectedStore.receiptHeader = elements.settingsReceiptHeader.value.trim() || selectedStore.name;
     state.settings.storeName = selectedStore.name;
     state.settings.taxRate = selectedStore.taxRate;
     state.settings.receiptFooter = selectedStore.receiptFooter;
+    render();
+  });
+
+  elements.userForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const name = elements.newUserNameInput.value.trim();
+    const pin = elements.newUserPinInput.value.trim();
+    const storeId = elements.newUserStoreSelect.value;
+    if (!name || !pin || !storeId) return;
+    const duplicate = state.users.some((user) => String(user.pin) === pin) || state.stores.some((store) => String(store.pin) === pin);
+    if (duplicate) {
+      window.alert("Each register and cashier must use a different PIN.");
+      return;
+    }
+    state.users.push({ id: uid("user"), name, pin, storeId, role: "cashier" });
+    elements.userForm.reset();
     render();
   });
 

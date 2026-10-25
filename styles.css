@@ -76,7 +76,20 @@ body[data-app-mode="back-office"] .manager-topbar {
 
 .manager-account {
   margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 14px;
   font-weight: 750;
+}
+
+.manager-logout {
+  min-height: 36px;
+  border: 1px solid rgba(255,255,255,.6);
+  border-radius: 5px;
+  background: transparent;
+  color: #fff;
+  padding: 0 12px;
+  font-weight: 800;
 }
 
 body[data-app-mode="back-office"] .app-shell {
@@ -492,6 +505,12 @@ body[data-app-mode="register"] .workspace-header {
   border: 1px solid #343434;
 }
 
+body[data-app-mode="register"] .header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 body[data-app-mode="register"] .logout-button {
   min-height: 38px;
   border-color: #a9ff43;
@@ -507,7 +526,8 @@ body[data-app-mode="register"] .register-layout {
   grid-template-columns: 320px 72px minmax(0, 1fr);
   grid-template-areas: "cart actions menu";
   gap: 7px;
-  min-height: calc(100vh - 80px);
+  height: calc(100vh - 80px);
+  min-height: 0;
 }
 
 body[data-app-mode="register"] .cart-panel {
@@ -515,6 +535,8 @@ body[data-app-mode="register"] .cart-panel {
   position: static;
   display: flex;
   flex-direction: column;
+  height: 100%;
+  min-height: 0;
   padding: 10px;
   border: 1px solid #555;
   border-radius: 0;
@@ -537,7 +559,7 @@ body[data-app-mode="register"] .cart-panel select {
 
 body[data-app-mode="register"] .cart-items {
   flex: 1;
-  min-height: 180px;
+  min-height: 80px;
   max-height: none;
 }
 
@@ -1401,6 +1423,7 @@ dialog::backdrop {
   body[data-app-mode="register"] .register-layout {
     grid-template-columns: 1fr;
     grid-template-areas: "cart" "actions" "menu";
+    height: auto;
   }
 
   body[data-app-mode="register"] .register-action-rail {

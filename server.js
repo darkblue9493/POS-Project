@@ -30,6 +30,7 @@ const defaultDb = {
   registers: [
     { id: "main-register", name: "Main Register", storeId: "thomaston-raceway" }
   ],
+  users: [],
   promotions: [],
   settings: {
     storeName: "Thomaston Raceway",
@@ -164,6 +165,7 @@ function withBarcodes(db) {
     ...db,
     stores,
     registers: Array.isArray(db.registers) && db.registers.length ? db.registers : defaultDb.registers,
+    users: Array.isArray(db.users) ? db.users : [],
     promotions: Array.isArray(db.promotions) ? db.promotions : [],
     items: (db.items || []).map((item) => ({
       ...item,
@@ -188,6 +190,7 @@ function readDb() {
       settings: migratedSettings,
       stores: Array.isArray(saved.stores) && saved.stores.length ? saved.stores : defaultDb.stores,
       registers: Array.isArray(saved.registers) && saved.registers.length ? saved.registers : defaultDb.registers,
+      users: Array.isArray(saved.users) ? saved.users : [],
       promotions: Array.isArray(saved.promotions) ? saved.promotions : [],
       nextOrderNumber: Number(saved.nextOrderNumber) || defaultDb.nextOrderNumber,
       orders: Array.isArray(saved.orders) ? saved.orders : []
@@ -215,19 +218,29 @@ async function handleApi(req, res, url) {
     const requestedStore = db.stores.find((store) => store.id === body.storeId);
     const pin = String(body.pin || "");
     let loginStore = null;
+    let registerAccessPin = "";
     if (role === "register") {
       if (requestedStore) {
         loginStore = requestedStore;
+        registerAccessPin = String(requestedStore.pin || registerPin);
       } else {
-        const matches = db.stores.filter((store) => String(store.pin || registerPin) === pin);
-        if (matches.length === 1) loginStore = matches[0];
+        const storeMatches = db.stores.filter((store) => String(store.pin || registerPin) === pin);
+        const userMatches = db.users.filter((user) => String(user.pin || "") === pin);
+        const matches = [
+          ...storeMatches.map((store) => ({ storeId: store.id, pin: String(store.pin || registerPin) })),
+          ...userMatches.map((user) => ({ storeId: user.storeId, pin: String(user.pin) }))
+        ];
+        if (matches.length === 1) {
+          loginStore = db.stores.find((store) => store.id === matches[0].storeId) || null;
+          registerAccessPin = matches[0].pin;
+        }
         if (matches.length > 1) {
           sendJson(res, 400, { ok: false, message: "More than one store uses this PIN. Give each store a different register PIN." });
           return;
         }
       }
     }
-    const expectedPin = role === "back-office" ? backOfficePin : String(loginStore?.pin || registerPin);
+    const expectedPin = role === "back-office" ? backOfficePin : String(registerAccessPin || registerPin);
     if (pin !== expectedPin) {
       sendJson(res, 401, { ok: false, message: "Wrong PIN" });
       return;
@@ -268,6 +281,7 @@ async function handleApi(req, res, url) {
       menuVersion: body.menuVersion || defaultDb.menuVersion,
       stores: Array.isArray(body.stores) && body.stores.length ? body.stores : defaultDb.stores,
       registers: Array.isArray(body.registers) && body.registers.length ? body.registers : defaultDb.registers,
+      users: Array.isArray(body.users) ? body.users : [],
       promotions: Array.isArray(body.promotions) ? body.promotions : [],
       settings: body.settings || defaultDb.settings,
       nextOrderNumber: Number(body.nextOrderNumber) || 1001,

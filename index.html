@@ -30,7 +30,7 @@
     <header class="manager-topbar" aria-label="Vedrix POS manager header">
       <a class="manager-logo" href="./back-office.html" aria-label="Vedrix POS home">VEDRIX <span>POS</span></a>
       <div class="manager-breadcrumb"><span class="menu-glyph">☰</span><span>Manager / Snapshot</span></div>
-      <div class="manager-account">Store manager</div>
+      <div class="manager-account"><span>Store manager</span><button class="manager-logout" id="managerLogoutButton" type="button">Log out</button></div>
     </header>
 
     <div class="app-shell">
@@ -185,8 +185,8 @@
         <section class="view" id="registerView">
           <header class="workspace-header">
             <div>
-              <p class="eyebrow">New sale</p>
-              <h2>Register</h2>
+              <p class="eyebrow">Vedrix POS · Register terminal</p>
+              <h2 id="registerStoreName">Store</h2>
             </div>
             <div class="header-actions">
               <div class="segmented" role="group" aria-label="Order type">
@@ -365,6 +365,10 @@
               <span>Receipt footer</span>
               <input id="settingsReceiptFooter" type="text" />
             </label>
+            <label>
+              <span>Receipt header</span>
+              <input id="settingsReceiptHeader" type="text" placeholder="Business name shown at the top" />
+            </label>
             <button class="primary-button" type="submit">Save settings</button>
           </form>
           <form class="settings-form" id="storeForm">
@@ -383,6 +387,23 @@
             <button class="primary-button" type="submit">Create store</button>
           </form>
           <div class="item-list" id="storeList"></div>
+          <form class="settings-form" id="userForm">
+            <h3>Cashier access</h3>
+            <label>
+              <span>Cashier name</span>
+              <input id="newUserNameInput" type="text" placeholder="Cashier name" required />
+            </label>
+            <label>
+              <span>Register PIN</span>
+              <input id="newUserPinInput" type="password" inputmode="numeric" placeholder="Unique cashier PIN" required />
+            </label>
+            <label>
+              <span>Store</span>
+              <select id="newUserStoreSelect"></select>
+            </label>
+            <button class="primary-button" type="submit">Add cashier</button>
+          </form>
+          <div class="item-list" id="userList"></div>
           <form class="settings-form is-hidden" id="registerForm">
             <label>
               <span>Register name</span>
