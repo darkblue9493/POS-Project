@@ -55,6 +55,7 @@
           <button class="tab-button" type="button" data-view="reports" data-modes="back-office" title="Sales reports">Sales Reports <span>›</span></button>
           <button class="tab-button" type="button" data-view="orders" data-modes="register back-office" title="Orders">Orders <span>›</span></button>
           <button class="tab-button" type="button" data-view="items" data-modes="back-office" title="Inventory">Inventory <span>›</span></button>
+          <button class="tab-button" type="button" data-view="layout" data-modes="back-office" title="POS menu layout">POS Layout <span>›</span></button>
           <button class="tab-button" type="button" data-view="settings" data-modes="back-office" title="Settings">Configuration <span>›</span></button>
         </nav>
 
@@ -356,14 +357,13 @@
             <button class="secondary-button" id="cancelItemEditButton" type="button" hidden>Cancel edit</button>
           </form>
           <p class="backoffice-note">Scan or type a barcode/SKU while adding an item. At the register, scan that same code and the product is added to the cart.</p>
+          <label class="inventory-filter"><span>Department</span><select id="inventoryCategoryFilter"></select></label>
           <div class="item-list" id="itemList"></div>
-          <section class="menu-layout-panel">
-            <div class="configuration-group-heading">
-              <span>POS menu layout</span>
-              <p>Use the arrows to set the button order for the selected store. The register updates automatically.</p>
-            </div>
-            <div class="item-list" id="menuLayoutList"></div>
-          </section>
+        </section>
+
+        <section class="view" id="layoutView">
+          <header class="workspace-header"><div><p class="eyebrow">Selected store</p><h2>POS menu layout</h2><p class="configuration-description">Drag a button and drop it where you want it on the register. Colors match the live POS menu.</p></div></header>
+          <div class="pos-layout-preview" id="posLayoutPreview"></div>
         </section>
 
         <section class="view" id="promotionsView">

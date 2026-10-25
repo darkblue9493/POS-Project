@@ -1446,6 +1446,59 @@ body[data-app-mode="back-office"] #itemsView > .item-list {
   padding-right: 4px;
 }
 
+.inventory-filter {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: -2px 0 14px;
+  color: #466175;
+  font-weight: 800;
+}
+
+.inventory-filter select {
+  min-width: 220px;
+  min-height: 40px;
+  border: 1px solid #cfd9e2;
+  border-radius: 5px;
+  background: #fff;
+  padding: 0 10px;
+  font: inherit;
+}
+
+.pos-layout-preview {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(170px, 1fr));
+  gap: 6px;
+  min-height: 560px;
+  padding: 16px;
+  border: 10px solid #151515;
+  background: #151515;
+  border-radius: 8px;
+}
+
+.pos-layout-preview .pos-menu-item {
+  min-height: 110px;
+  border-radius: 0;
+  border: 1px solid #671000;
+  background: linear-gradient(#f83a21, #a70800);
+  color: #fff700;
+  text-align: center;
+  text-shadow: 1px 1px #480000;
+  cursor: grab;
+}
+
+.pos-layout-preview .pos-menu-item:active { cursor: grabbing; }
+.pos-layout-preview .pos-menu-item span { display: block; font-size: .76rem; margin: 5px 0; }
+.pos-layout-preview .pos-menu-item.chip-combos { border-color:#7c6900; background:linear-gradient(#fff94e,#e5bd00); color:#272100; text-shadow:none; }
+.pos-layout-preview .pos-menu-item.chip-tenders { background:linear-gradient(#f83a21,#a70800); }
+.pos-layout-preview .pos-menu-item.chip-sides { background:linear-gradient(#f5f5f5,#d8d8d8); color:#9f2929; text-shadow:none; border-color:#777; }
+.pos-layout-preview .pos-menu-item.chip-drinks { background:linear-gradient(#56cdd8,#159eac); color:#fff; }
+
+@media (max-width: 700px) {
+  .pos-layout-preview { grid-template-columns: repeat(2, minmax(130px, 1fr)); padding: 8px; border-width: 6px; }
+  .pos-layout-preview .pos-menu-item { min-height: 92px; font-size: .86rem; }
+}
+
 .unused-manager-control,
 .coupon-setting {
   display: none !important;

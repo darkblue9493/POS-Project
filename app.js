@@ -183,6 +183,8 @@
     cancelItemEditButton: document.getElementById("cancelItemEditButton"),
     itemList: document.getElementById("itemList"),
     menuLayoutList: document.getElementById("menuLayoutList"),
+    inventoryCategoryFilter: document.getElementById("inventoryCategoryFilter"),
+    posLayoutPreview: document.getElementById("posLayoutPreview"),
     settingsForm: document.getElementById("settingsForm"),
     storeForm: document.getElementById("storeForm"),
     newStoreNameInput: document.getElementById("newStoreNameInput"),
@@ -249,7 +251,7 @@
   }
 
   function getAllowedViews() {
-    return appMode === "back-office" ? ["dashboard", "reports", "orders", "items", "promotions", "settings"] : ["register", "orders"];
+    return appMode === "back-office" ? ["dashboard", "reports", "orders", "items", "layout", "promotions", "settings"] : ["register", "orders"];
   }
 
   function applyAppMode() {
@@ -543,6 +545,7 @@
     renderCart();
     renderOrders();
     renderItems();
+    renderPosLayout();
     renderPromotions();
     renderDashboard();
     renderReports();
@@ -1304,7 +1307,11 @@
 
   function renderItems() {
     elements.itemList.innerHTML = "";
-    getStoreItems().forEach((item) => {
+    const categories = ["All departments", ...Array.from(new Set(getStoreItems().map((item) => item.category)))];
+    const previousCategory = elements.inventoryCategoryFilter.value || "All departments";
+    elements.inventoryCategoryFilter.innerHTML = categories.map((category) => `<option value="${escapeHtml(category)}">${escapeHtml(category)}</option>`).join("");
+    elements.inventoryCategoryFilter.value = categories.includes(previousCategory) ? previousCategory : "All departments";
+    getStoreItems().filter((item) => elements.inventoryCategoryFilter.value === "All departments" || item.category === elements.inventoryCategoryFilter.value).forEach((item) => {
       const row = document.createElement("div");
       row.className = "item-list-row";
       row.innerHTML = `
@@ -1328,7 +1335,34 @@
       });
       elements.itemList.appendChild(row);
     });
-    renderMenuLayout();
+  }
+
+  function renderPosLayout() {
+    if (!elements.posLayoutPreview) return;
+    elements.posLayoutPreview.innerHTML = "";
+    getStoreItems().forEach((item) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.draggable = true;
+      button.dataset.itemId = item.id;
+      button.className = `menu-item pos-menu-item ${categoryChipClass(item.category)}`;
+      button.innerHTML = `<strong>${escapeHtml(item.name)}</strong><span>${escapeHtml(item.category)}</span><strong>${price(item.price)}</strong>`;
+      button.addEventListener("dragstart", (event) => event.dataTransfer.setData("text/plain", item.id));
+      button.addEventListener("dragover", (event) => event.preventDefault());
+      button.addEventListener("drop", async (event) => {
+        event.preventDefault();
+        const draggedId = event.dataTransfer.getData("text/plain");
+        if (!draggedId || draggedId === item.id) return;
+        const ordered = getStoreItems().filter((candidate) => candidate.id !== draggedId);
+        const targetIndex = ordered.findIndex((candidate) => candidate.id === item.id);
+        const moved = state.items.find((candidate) => candidate.id === draggedId);
+        ordered.splice(targetIndex, 0, moved);
+        ordered.forEach((candidate, index) => { candidate.menuPosition = index + 1; });
+        render();
+        await persistNow();
+      });
+      elements.posLayoutPreview.appendChild(button);
+    });
   }
 
   function renderMenuLayout() {
@@ -1521,6 +1555,7 @@
     });
   });
   elements.itemSearch.addEventListener("input", renderMenu);
+  elements.inventoryCategoryFilter.addEventListener("change", renderItems);
   elements.barcodeScanInput.addEventListener("keydown", (event) => {
     if (event.key === "Enter") {
       event.preventDefault();
