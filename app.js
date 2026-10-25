@@ -24,6 +24,7 @@
     selectedRegisterId: "main-register",
     orderType: "dine-in",
     payment: "Cash",
+    manualDiscount: 0,
     cart: [],
     orders: [],
     items: [
@@ -139,7 +140,6 @@
     ticketNote: document.getElementById("ticketNote"),
     orderSource: document.getElementById("orderSource"),
     cartItems: document.getElementById("cartItems"),
-    bogoToggle: document.getElementById("bogoToggle"),
     subtotal: document.getElementById("subtotal"),
     discount: document.getElementById("discount"),
     tax: document.getElementById("tax"),
@@ -422,23 +422,12 @@
 
   function getCartTotals() {
     const subtotal = state.cart.reduce((sum, line) => sum + line.price * line.qty, 0);
-    const discount = (elements.bogoToggle.checked ? getBogoDiscount() : 0) + getPromotionDiscount();
+    const discount = Math.min(subtotal, Math.max(0, Number(state.manualDiscount) || 0) + getPromotionDiscount());
     const taxable = Math.max(0, subtotal - discount);
     const selectedStore = getSelectedStore();
     const taxRate = selectedStore.taxRate ?? state.settings.taxRate;
     const tax = taxable * ((Number(taxRate) || 0) / 100);
     return { subtotal, discount, tax, total: taxable + tax };
-  }
-
-  function getBogoDiscount() {
-    const tenderUnits = [];
-    state.cart.forEach((line) => {
-      if (!line.tender) return;
-      for (let i = 0; i < line.qty; i += 1) tenderUnits.push(line.price);
-    });
-    tenderUnits.sort((a, b) => a - b);
-    const freeCount = Math.floor(tenderUnits.length / 2);
-    return tenderUnits.slice(0, freeCount).reduce((sum, amount) => sum + amount, 0);
   }
 
   function getPromotionDiscount() {
@@ -1039,7 +1028,7 @@
       source: elements.orderSource.value,
       note: elements.ticketNote.value.trim(),
       payment: state.payment,
-      promo: elements.bogoToggle.checked ? "BOGO tenders" : "",
+      promo: Number(state.manualDiscount) > 0 ? `Manual discount: ${price(state.manualDiscount)}` : "",
       items: state.cart.map((line) => ({ ...line })),
       totals,
       createdAt: new Date().toISOString(),
@@ -1054,6 +1043,7 @@
     elements.customerName.value = "";
     elements.ticketNote.value = "";
     showReceipt(order);
+    state.manualDiscount = 0;
     render();
   }
 
@@ -1345,10 +1335,10 @@
       scanBarcode(elements.barcodeScanInput.value);
     }
   });
-  elements.bogoToggle.addEventListener("change", renderCart);
   elements.checkoutButton.addEventListener("click", completeOrder);
   elements.clearCartButton.addEventListener("click", () => {
     state.cart = [];
+    state.manualDiscount = 0;
     renderCart();
     saveState();
   });
@@ -1400,6 +1390,7 @@
   }));
   document.querySelectorAll("[data-start-over]").forEach((button) => button.addEventListener("click", () => {
     state.cart = [];
+    state.manualDiscount = 0;
     elements.customerName.value = "";
     elements.ticketNote.value = "";
     renderCart();
@@ -1410,7 +1401,16 @@
     if (order) showReceipt(order);
   }));
   document.querySelectorAll("[data-toggle-discount]").forEach((button) => button.addEventListener("click", () => {
-    elements.bogoToggle.checked = !elements.bogoToggle.checked;
+    const subtotal = state.cart.reduce((sum, line) => sum + line.price * line.qty, 0);
+    if (!subtotal) return;
+    const value = window.prompt(`Discount amount (up to ${price(subtotal)})`, state.manualDiscount ? Number(state.manualDiscount).toFixed(2) : "");
+    if (value === null) return;
+    const amount = Number(String(value).replace(/[$,\s]/g, ""));
+    if (!Number.isFinite(amount) || amount < 0) {
+      window.alert("Enter a valid discount amount.");
+      return;
+    }
+    state.manualDiscount = Math.min(subtotal, amount);
     renderCart();
     saveState();
   }));
