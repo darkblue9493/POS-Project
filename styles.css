@@ -799,6 +799,15 @@ select {
   min-width: 150px;
 }
 
+.custom-range-fields {
+  display: flex;
+  gap: 10px;
+}
+
+.report-range-label input[type="date"] {
+  min-width: 142px;
+}
+
 .report-caption {
   margin: -8px 0 16px;
   color: var(--muted);
@@ -1519,6 +1528,14 @@ dialog::backdrop {
   body[data-app-mode="back-office"] .report-actions {
     align-items: stretch;
     width: 100%;
+  }
+
+  body[data-app-mode="back-office"] .custom-range-fields {
+    width: 100%;
+  }
+
+  body[data-app-mode="back-office"] .custom-range-fields .report-range-label {
+    flex: 1;
   }
 }
 

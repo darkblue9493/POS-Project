@@ -152,8 +152,17 @@
                   <option value="7">Last 7 days</option>
                   <option value="30">Last 30 days</option>
                   <option value="all">All sales</option>
+                  <option value="custom">Custom range</option>
                 </select>
               </label>
+              <div class="custom-range-fields" id="customRangeFields" hidden>
+                <label class="report-range-label">From
+                  <input id="reportStartDate" type="date" />
+                </label>
+                <label class="report-range-label">To
+                  <input id="reportEndDate" type="date" />
+                </label>
+              </div>
               <button class="secondary-button" id="exportReportButton" type="button">Export sales CSV</button>
             </div>
           </header>

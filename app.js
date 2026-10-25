@@ -97,6 +97,9 @@
     activePromoCount: document.getElementById("activePromoCount"),
     recentOrders: document.getElementById("recentOrders"),
     reportRange: document.getElementById("reportRange"),
+    customRangeFields: document.getElementById("customRangeFields"),
+    reportStartDate: document.getElementById("reportStartDate"),
+    reportEndDate: document.getElementById("reportEndDate"),
     reportCaption: document.getElementById("reportCaption"),
     reportGrossSales: document.getElementById("reportGrossSales"),
     reportDiscounts: document.getElementById("reportDiscounts"),
@@ -621,12 +624,30 @@
     const range = elements.reportRange ? elements.reportRange.value : "today";
     const orders = state.orders.filter((order) => (order.storeId || state.selectedStoreId) === state.selectedStoreId);
     if (range === "all") return orders;
+    if (range === "custom") {
+      const start = elements.reportStartDate.value ? new Date(`${elements.reportStartDate.value}T00:00:00`) : null;
+      const end = elements.reportEndDate.value ? new Date(`${elements.reportEndDate.value}T23:59:59.999`) : null;
+      return orders.filter((order) => (!start || new Date(order.createdAt) >= start) && (!end || new Date(order.createdAt) <= end));
+    }
     const now = new Date();
     if (range === "today") return orders.filter((order) => new Date(order.createdAt).toDateString() === now.toDateString());
     const cutoff = new Date(now);
     cutoff.setHours(0, 0, 0, 0);
     cutoff.setDate(cutoff.getDate() - (Number(range) - 1));
     return orders.filter((order) => new Date(order.createdAt) >= cutoff);
+  }
+
+  function updateCustomRangeFields() {
+    const custom = elements.reportRange.value === "custom";
+    elements.customRangeFields.hidden = !custom;
+    if (!custom) return;
+    const today = new Date().toISOString().slice(0, 10);
+    if (!elements.reportEndDate.value) elements.reportEndDate.value = today;
+    if (!elements.reportStartDate.value) {
+      const start = new Date();
+      start.setDate(start.getDate() - 6);
+      elements.reportStartDate.value = start.toISOString().slice(0, 10);
+    }
   }
 
   function renderReportRows(container, rows, emptyText) {
@@ -664,7 +685,7 @@
       summary.payments[order.payment || "Other"] = (summary.payments[order.payment || "Other"] || 0) + Number(order.totals?.total || 0);
       return summary;
     }, { gross: 0, discount: 0, tax: 0, sales: 0, items: 0, payments: {}, bestSellers: new Map() });
-    const rangeLabels = { today: "today", 7: "the last 7 days", 30: "the last 30 days", all: "all time" };
+    const rangeLabels = { today: "today", 7: "the last 7 days", 30: "the last 30 days", all: "all time", custom: `${elements.reportStartDate.value || "the beginning"} to ${elements.reportEndDate.value || "today"}` };
     elements.reportCaption.textContent = `${orders.length} completed ticket${orders.length === 1 ? "" : "s"} for ${rangeLabels[elements.reportRange.value]}.`;
     elements.reportGrossSales.textContent = price(totals.sales);
     elements.reportDiscounts.textContent = price(totals.discount);
@@ -1138,8 +1159,13 @@
     saveState();
   });
   elements.exportOrdersButton.addEventListener("click", () => exportOrders());
-  elements.reportRange.addEventListener("change", renderReports);
-  elements.exportReportButton.addEventListener("click", () => exportOrders(getReportOrders(), `pos-sales-${elements.reportRange.value}.csv`));
+  elements.reportRange.addEventListener("change", () => { updateCustomRangeFields(); renderReports(); });
+  elements.reportStartDate.addEventListener("change", renderReports);
+  elements.reportEndDate.addEventListener("change", renderReports);
+  elements.exportReportButton.addEventListener("click", () => {
+    const suffix = elements.reportRange.value === "custom" ? `${elements.reportStartDate.value || "start"}-to-${elements.reportEndDate.value || "end"}` : elements.reportRange.value;
+    exportOrders(getReportOrders(), `pos-sales-${suffix}.csv`);
+  });
   elements.printReceiptButton.addEventListener("click", () => window.print());
   elements.closeReceiptButton.addEventListener("click", () => elements.receiptDialog.close());
   elements.registerLoginButton.addEventListener("click", () => setLoginRole("register"));
@@ -1350,6 +1376,7 @@
   elements.orderTypeButtons.forEach((button) => button.classList.toggle("active", button.dataset.orderType === state.orderType));
   elements.paymentButtons.forEach((button) => button.classList.toggle("active", button.dataset.payment === state.payment));
   applyAppMode();
+  updateCustomRangeFields();
   if (remoteMode) {
     setLoginRole(appMode);
     setLoginVisible(true);
