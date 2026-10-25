@@ -25,9 +25,11 @@
     orderType: "dine-in",
     payment: "Cash",
     manualDiscount: 0,
+    activeCouponCode: "",
     cart: [],
     orders: [],
     waste: [],
+    coupons: [],
     items: [
       { id: "bonein-box-2", name: "2 Piece Bone-In Box", category: "Krunch Box Bone-In", price: 8.09, tender: false },
       { id: "bonein-box-3", name: "3 Piece Bone-In Box", category: "Krunch Box Bone-In", price: 9.59, tender: false },
@@ -149,6 +151,7 @@
     total: document.getElementById("total"),
     checkoutButton: document.getElementById("checkoutButton"),
     clearCartButton: document.getElementById("clearCartButton"),
+    couponCodeButton: document.getElementById("couponCodeButton"),
     openWasteButton: document.getElementById("openWasteButton"),
     wasteDialog: document.getElementById("wasteDialog"),
     wasteForm: document.getElementById("wasteForm"),
@@ -192,6 +195,12 @@
     settingsTaxRate: document.getElementById("settingsTaxRate"),
     settingsReceiptFooter: document.getElementById("settingsReceiptFooter"),
     settingsReceiptHeader: document.getElementById("settingsReceiptHeader"),
+    settingsReceiptAddress: document.getElementById("settingsReceiptAddress"),
+    settingsReceiptPhone: document.getElementById("settingsReceiptPhone"),
+    settingsCouponPercent: document.getElementById("settingsCouponPercent"),
+    settingsCouponMessage: document.getElementById("settingsCouponMessage"),
+    settingsCouponDelay: document.getElementById("settingsCouponDelay"),
+    settingsCouponValidity: document.getElementById("settingsCouponValidity"),
     configurationStoreName: document.getElementById("configurationStoreName"),
     userForm: document.getElementById("userForm"),
     newUserNameInput: document.getElementById("newUserNameInput"),
@@ -319,6 +328,7 @@
       merged.promotions = Array.isArray(merged.promotions) ? merged.promotions : [];
       merged.users = Array.isArray(merged.users) ? merged.users : [];
       merged.waste = Array.isArray(merged.waste) ? merged.waste : [];
+      merged.coupons = Array.isArray(merged.coupons) ? merged.coupons : [];
       merged.selectedStoreId = merged.selectedStoreId || merged.stores[0].id;
       merged.selectedRegisterId = merged.selectedRegisterId || merged.registers[0].id;
       merged.items = merged.items.map((item) => ({ ...item, storeId: item.storeId || merged.stores[0].id, stock: Number(item.stock) || 0, cost: Number(item.cost) || 0, barcode: item.barcode || item.sku || item.id }));
@@ -388,6 +398,7 @@
           items: state.items,
           orders: state.orders,
           waste: state.waste,
+          coupons: state.coupons,
         }),
       });
     } catch (error) {
@@ -454,7 +465,9 @@
 
   function getCartTotals() {
     const subtotal = state.cart.reduce((sum, line) => sum + line.price * line.qty, 0);
-    const discount = Math.min(subtotal, Math.max(0, Number(state.manualDiscount) || 0) + getPromotionDiscount());
+    const coupon = state.coupons.find((candidate) => candidate.code === state.activeCouponCode && !candidate.redeemedAt);
+    const couponDiscount = coupon ? subtotal * ((Number(coupon.percent) || 0) / 100) : 0;
+    const discount = Math.min(subtotal, Math.max(0, Number(state.manualDiscount) || 0) + getPromotionDiscount() + couponDiscount);
     const taxable = Math.max(0, subtotal - discount);
     const selectedStore = getSelectedStore();
     const taxRate = selectedStore.taxRate ?? state.settings.taxRate;
@@ -477,6 +490,19 @@
       }, 0);
   }
 
+  function createCoupon(store) {
+    const percent = Math.max(0, Math.min(100, Number(store.couponPercent ?? 10)));
+    if (!percent) return null;
+    const createdAt = new Date();
+    const availableAt = new Date(createdAt.getTime() + Math.max(0, Number(store.couponDelayHours ?? 24)) * 60 * 60 * 1000);
+    const expiresAt = new Date(createdAt.getTime() + Math.max(1, Number(store.couponValidityDays ?? 7)) * 24 * 60 * 60 * 1000);
+    let code = "";
+    do { code = Array.from({ length: 7 }, () => "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"[Math.floor(Math.random() * 32)]).join(""); } while (state.coupons.some((coupon) => coupon.code === code));
+    const coupon = { id: uid("coupon"), code, storeId: store.id, percent, message: String(store.couponMessage || "Get {percent}% off on your next visit").replaceAll("{percent}", String(percent)), createdAt: createdAt.toISOString(), availableAt: availableAt.toISOString(), expiresAt: expiresAt.toISOString(), redeemedAt: "" };
+    state.coupons.unshift(coupon);
+    return coupon;
+  }
+
   function setView(viewName) {
     const allowed = getAllowedViews();
     const targetView = allowed.includes(viewName) ? viewName : allowed[0];
@@ -496,6 +522,12 @@
     elements.settingsTaxRate.value = selectedStore.taxRate ?? state.settings.taxRate;
     elements.settingsReceiptFooter.value = selectedStore.receiptFooter ?? state.settings.receiptFooter;
     elements.settingsReceiptHeader.value = selectedStore.receiptHeader ?? selectedStore.name;
+    elements.settingsReceiptAddress.value = selectedStore.receiptAddress ?? selectedStore.address ?? "";
+    elements.settingsReceiptPhone.value = selectedStore.receiptPhone ?? "";
+    elements.settingsCouponPercent.value = selectedStore.couponPercent ?? 10;
+    elements.settingsCouponMessage.value = selectedStore.couponMessage ?? "Get {percent}% off on your next visit";
+    elements.settingsCouponDelay.value = selectedStore.couponDelayHours ?? 24;
+    elements.settingsCouponValidity.value = selectedStore.couponValidityDays ?? 7;
     if (elements.configurationStoreName) elements.configurationStoreName.textContent = selectedStore.name;
     renderCategories();
     renderStoreSelect();
@@ -552,6 +584,7 @@
       state.users = [];
     }
     if (!Array.isArray(state.waste)) state.waste = [];
+    if (!Array.isArray(state.coupons)) state.coupons = [];
     if (!state.selectedStoreId || !state.stores.some((store) => store.id === state.selectedStoreId)) {
       state.selectedStoreId = state.stores[0].id;
     }
@@ -1124,12 +1157,18 @@
   function completeOrder() {
     if (!state.cart.length) return;
     const totals = getCartTotals();
+    const store = getSelectedStore();
+    const issuedCoupon = createCoupon(store);
+    const redeemedCoupon = state.coupons.find((coupon) => coupon.code === state.activeCouponCode && !coupon.redeemedAt);
+    if (redeemedCoupon) redeemedCoupon.redeemedAt = new Date().toISOString();
     const order = {
       id: state.nextOrderNumber,
       customer: elements.customerName.value.trim() || "Walk-in",
       storeId: state.selectedStoreId,
-      storeName: getSelectedStore().name,
-      receiptHeader: getSelectedStore().receiptHeader || getSelectedStore().name,
+      storeName: store.name,
+      receiptHeader: store.receiptHeader || store.name,
+      receiptAddress: store.receiptAddress || store.address || "",
+      receiptPhone: store.receiptPhone || "",
       registerId: state.selectedRegisterId,
       registerName: getSelectedRegister().name,
       cashierName: currentCashierName || "Cashier 1",
@@ -1140,6 +1179,7 @@
       promo: Number(state.manualDiscount) > 0 ? `Manual discount: ${price(state.manualDiscount)}` : "",
       items: state.cart.map((line) => ({ ...line })),
       totals,
+      issuedCoupon,
       createdAt: new Date().toISOString(),
     };
     state.orders.unshift(order);
@@ -1153,6 +1193,7 @@
     elements.ticketNote.value = "";
     showReceipt(order);
     state.manualDiscount = 0;
+    state.activeCouponCode = "";
     render();
   }
 
@@ -1164,7 +1205,8 @@
     const selectedStore = getSelectedStore();
     elements.receiptContent.innerHTML = `
       <h3>${escapeHtml(order.receiptHeader || order.storeName || selectedStore.receiptHeader || selectedStore.name)}</h3>
-      <p>Order #${order.id}<br>${new Date(order.createdAt).toLocaleString()}<br>${escapeHtml(order.customer)}<br>${escapeHtml(order.storeName || getSelectedStore().name)} / ${escapeHtml(order.registerName || getSelectedRegister().name)}<br>Cashier: ${escapeHtml(order.cashierName || "Cashier 1")}<br>${escapeHtml(order.source || "In Store")}</p>
+      ${(order.receiptAddress || order.receiptPhone) ? `<p class="receipt-contact">${escapeHtml(order.receiptAddress || "")}${order.receiptAddress && order.receiptPhone ? "<br>" : ""}${escapeHtml(order.receiptPhone || "")}</p>` : ""}
+      <p>Order #${order.id}<br>${new Date(order.createdAt).toLocaleString()}<br>${escapeHtml(order.customer)}<br>Cashier: ${escapeHtml(order.cashierName || "Cashier 1")}<br>${escapeHtml(order.source || "In Store")}</p>
       ${order.note ? `<p>Note: ${escapeHtml(order.note)}</p>` : ""}
       ${order.items
         .map(
@@ -1185,6 +1227,7 @@
       <div class="receipt-line"><span>Discount</span><strong>-${price(order.totals.discount)}</strong></div>
       <div class="receipt-line"><span>Tax</span><strong>${price(order.totals.tax)}</strong></div>
       <div class="receipt-line"><span>Total</span><strong>${price(order.totals.total)}</strong></div>
+      ${order.issuedCoupon ? `<hr><div class="receipt-coupon"><strong>${escapeHtml(order.issuedCoupon.message)}</strong><span>Use code: ${escapeHtml(order.issuedCoupon.code)}</span><small>Available ${new Date(order.issuedCoupon.availableAt).toLocaleDateString()} · Expires ${new Date(order.issuedCoupon.expiresAt).toLocaleDateString()}</small></div>` : ""}
       <p>${escapeHtml(selectedStore.receiptFooter ?? state.settings.receiptFooter)}</p>
     `;
     elements.receiptDialog.showModal();
@@ -1478,6 +1521,7 @@
   elements.clearCartButton.addEventListener("click", () => {
     state.cart = [];
     state.manualDiscount = 0;
+    state.activeCouponCode = "";
     renderCart();
     saveState();
   });
@@ -1495,6 +1539,20 @@
     elements.wasteDialog.showModal();
   });
   elements.cancelWasteButton.addEventListener("click", () => elements.wasteDialog.close());
+  elements.couponCodeButton.addEventListener("click", () => {
+    if (!state.cart.length) return;
+    const code = window.prompt("Enter coupon code")?.trim().toUpperCase();
+    if (!code) return;
+    const coupon = state.coupons.find((candidate) => candidate.code === code && candidate.storeId === state.selectedStoreId);
+    const now = Date.now();
+    if (!coupon) return window.alert("Coupon code was not found for this store.");
+    if (coupon.redeemedAt) return window.alert("This coupon has already been used.");
+    if (now < new Date(coupon.availableAt).getTime()) return window.alert(`This coupon is available after ${new Date(coupon.availableAt).toLocaleString()}.`);
+    if (now > new Date(coupon.expiresAt).getTime()) return window.alert("This coupon has expired.");
+    state.activeCouponCode = coupon.code;
+    renderCart();
+    window.alert(`${coupon.percent}% coupon applied.`);
+  });
   elements.wasteForm.addEventListener("submit", async (event) => {
     event.preventDefault();
     const item = state.items.find((candidate) => candidate.id === elements.wasteItemSelect.value && candidate.storeId === state.selectedStoreId);
@@ -1673,6 +1731,13 @@
     selectedStore.taxRate = Number(elements.settingsTaxRate.value) || 0;
     selectedStore.receiptFooter = elements.settingsReceiptFooter.value.trim();
     selectedStore.receiptHeader = elements.settingsReceiptHeader.value.trim() || selectedStore.name;
+    selectedStore.receiptAddress = elements.settingsReceiptAddress.value.trim();
+    selectedStore.address = selectedStore.receiptAddress;
+    selectedStore.receiptPhone = elements.settingsReceiptPhone.value.trim();
+    selectedStore.couponPercent = Math.max(0, Math.min(100, Number(elements.settingsCouponPercent.value) || 0));
+    selectedStore.couponMessage = elements.settingsCouponMessage.value.trim() || "Get {percent}% off on your next visit";
+    selectedStore.couponDelayHours = Math.max(0, Number(elements.settingsCouponDelay.value) || 0);
+    selectedStore.couponValidityDays = Math.max(1, Number(elements.settingsCouponValidity.value) || 1);
     state.settings.storeName = selectedStore.name;
     state.settings.taxRate = selectedStore.taxRate;
     state.settings.receiptFooter = selectedStore.receiptFooter;

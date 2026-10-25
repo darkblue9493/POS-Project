@@ -334,6 +334,23 @@ body[data-app-mode="back-office"] .primary-button {
   font: inherit;
 }
 
+.receipt-contact,
+.receipt-coupon {
+  text-align: center;
+}
+
+.receipt-coupon {
+  display: grid;
+  gap: 5px;
+  padding: 10px 0;
+}
+
+.receipt-coupon span {
+  font-size: 1.25rem;
+  font-weight: 900;
+  letter-spacing: .08em;
+}
+
 .login-screen {
   position: fixed;
   inset: 0;

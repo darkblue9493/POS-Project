@@ -43,6 +43,7 @@ const defaultDb = {
   nextOrderNumber: 1001,
   orders: [],
   waste: [],
+  coupons: [],
   items: [
     { id: "bonein-box-2", name: "2 Piece Bone-In Box", category: "Krunch Box Bone-In", price: 8.09, tender: false },
     { id: "bonein-box-3", name: "3 Piece Bone-In Box", category: "Krunch Box Bone-In", price: 9.59, tender: false },
@@ -172,6 +173,7 @@ function withBarcodes(db) {
     users: Array.isArray(db.users) ? db.users : [],
     promotions: Array.isArray(db.promotions) ? db.promotions : [],
     waste: Array.isArray(db.waste) ? db.waste : [],
+    coupons: Array.isArray(db.coupons) ? db.coupons : [],
     items: (db.items || []).map((item) => ({
       ...item,
       storeId: item.storeId || "thomaston-raceway",
@@ -196,6 +198,7 @@ function normalizeDb(saved) {
       users: Array.isArray(saved.users) ? saved.users : [],
       promotions: Array.isArray(saved.promotions) ? saved.promotions : [],
       waste: Array.isArray(saved.waste) ? saved.waste : [],
+      coupons: Array.isArray(saved.coupons) ? saved.coupons : [],
       nextOrderNumber: Number(saved.nextOrderNumber) || defaultDb.nextOrderNumber,
       orders: Array.isArray(saved.orders) ? saved.orders : []
     };
@@ -342,6 +345,7 @@ async function handleApi(req, res, url) {
       users: Array.isArray(body.users) ? body.users : [],
       promotions: Array.isArray(body.promotions) ? body.promotions : [],
       waste: Array.isArray(body.waste) ? body.waste : [],
+      coupons: Array.isArray(body.coupons) ? body.coupons : [],
       settings: body.settings || defaultDb.settings,
       nextOrderNumber: Number(body.nextOrderNumber) || 1001,
       items: Array.isArray(body.items) ? body.items : [],
