@@ -989,6 +989,26 @@ dialog::backdrop {
   margin: 6px 0;
 }
 
+.receipt-item-barcode {
+  margin: -2px 0 10px;
+  text-align: center;
+}
+
+.receipt-barcode {
+  display: block;
+  width: min(100%, 330px);
+  height: 42px;
+  margin: 0 auto;
+  fill: #111;
+}
+
+.receipt-item-barcode span {
+  display: block;
+  font-size: .68rem;
+  letter-spacing: .08em;
+  word-break: break-all;
+}
+
 .dialog-actions {
   padding: 14px;
   border-top: 1px solid var(--line);

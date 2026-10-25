@@ -800,6 +800,10 @@
               <span>${item.qty} x ${escapeHtml(item.name)}</span>
               <strong>${price(item.qty * item.price)}</strong>
             </div>
+            <div class="receipt-item-barcode">
+              ${barcodeSvg(item)}
+              <span>${escapeHtml(receiptBarcodeValue(item))}</span>
+            </div>
           `
         )
         .join("")}
@@ -812,6 +816,38 @@
       <p>${escapeHtml(selectedStore.receiptFooter ?? state.settings.receiptFooter)}</p>
     `;
     elements.receiptDialog.showModal();
+  }
+
+  function receiptBarcodeValue(item) {
+    const candidate = String(item.barcode || item.sku || item.id || "").trim().toUpperCase();
+    if (candidate && /^[0-9A-Z .\-$\/+%]+$/.test(candidate)) return candidate;
+    return String(item.id || "POS-ITEM").replace(/[^0-9A-Z-]/gi, "-").toUpperCase();
+  }
+
+  function barcodeSvg(item) {
+    const patterns = {
+      "0": "nnnwwnwnn", "1": "wnnwnnnnw", "2": "nnwwnnnnw", "3": "wnwwnnnnn", "4": "nnnwwnnnw",
+      "5": "wnnwwnnnn", "6": "nnwwwnnnn", "7": "nnnwnnwnw", "8": "wnnwnnwnn", "9": "nnwwnnwnn",
+      "A": "wnnnnwnnw", "B": "nnwnnwnnw", "C": "wnwnnwnnn", "D": "nnnnwwnnw", "E": "wnnnwwnnn",
+      "F": "nnwnwwnnn", "G": "nnnnnwwnw", "H": "wnnnnwwnn", "I": "nnwnnwwnn", "J": "nnnnwwwnn",
+      "K": "wnnnnnnww", "L": "nnwnnnnww", "M": "wnwnnnnwn", "N": "nnnnwnnww", "O": "wnnnwnnwn",
+      "P": "nnwnwnnwn", "Q": "nnnnnnwww", "R": "wnnnnnwwn", "S": "nnwnnnwwn", "T": "nnnnwnwwn",
+      "U": "wwnnnnnnw", "V": "nwwnnnnnw", "W": "wwwnnnnnn", "X": "nwnnwnnnw", "Y": "wwnnwnnnn",
+      "Z": "nwwnwnnnn", "-": "nwnnnnwnw", ".": "wwnnnnwnn", " ": "nwwnnnwnn", "$": "nwnwnwnnn",
+      "/": "nwnwnnnwn", "+": "nwnnnwnwn", "%": "nnnwnwnwn", "*": "nwnnwnwnn"
+    };
+    const content = `*${receiptBarcodeValue(item)}*`;
+    const bars = [];
+    let position = 14;
+    for (const character of content) {
+      patterns[character].split("").forEach((widthType, index) => {
+        const width = widthType === "w" ? 5 : 2;
+        if (index % 2 === 0) bars.push(`<rect x="${position}" y="2" width="${width}" height="42"/>`);
+        position += width;
+      });
+      position += 2;
+    }
+    return `<svg class="receipt-barcode" viewBox="0 0 ${position + 14} 46" role="img" aria-label="Barcode ${escapeHtml(receiptBarcodeValue(item))}">${bars.join("")}</svg>`;
   }
 
   function renderOrders() {
