@@ -1661,7 +1661,7 @@
         * { box-sizing: border-box; }
         html, body { width: 72mm; min-height: 0; margin: 0; padding: 0; background: #fff; color: #111; }
         body { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
-        .receipt { width: 72mm; margin: 0 auto; padding: 4mm 0 5mm; font-size: 11pt; line-height: 1.25; }
+        .receipt { width: 64mm; margin: 0 auto; padding: 4mm 0 5mm; font-size: 11pt; line-height: 1.25; }
         .receipt h3, .receipt p { margin: 0 0 3mm; }
         .receipt h3, .receipt > p:last-child { text-align: center; letter-spacing: .03em; }
         .receipt-contact, .receipt-coupon { text-align: center; }
@@ -1670,7 +1670,7 @@
         .receipt-coupon small { font-size: 8.5pt; }
         .receipt-line { display: flex; justify-content: space-between; gap: 3mm; margin: 1.5mm 0; }
         .receipt-item-barcode { margin: 0 0 3mm; text-align: center; }
-        .receipt-barcode { display: block; width: 64mm; height: auto; min-height: 20mm; margin: 1mm auto 3mm; fill: #111; shape-rendering: crispEdges; }
+        .receipt-barcode { display: block; width: 56mm; height: auto; min-height: 20mm; margin: 1mm auto 3mm; fill: #111; shape-rendering: crispEdges; }
         .receipt-barcode text { font: 10px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; letter-spacing: 1px; }
         hr { border: 0; border-top: 1px solid #777; margin: 3mm 0; }
       </style></head><body><main class="receipt" id="thermalReceipt">${receipt}</main>
