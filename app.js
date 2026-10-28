@@ -215,6 +215,7 @@
     receiptDialog: document.getElementById("receiptDialog"),
     receiptContent: document.getElementById("receiptContent"),
     printReceiptButton: document.getElementById("printReceiptButton"),
+    shareReceiptButton: document.getElementById("shareReceiptButton"),
     closeReceiptButton: document.getElementById("closeReceiptButton"),
     promotionForm: document.getElementById("promotionForm"),
     promoNameInput: document.getElementById("promoNameInput"),
@@ -1687,7 +1688,27 @@
     printWindow.document.close();
   }
 
+  async function shareReceiptToPrinter() {
+    const receiptText = elements.receiptContent.innerText
+      .replace(/\n{3,}/g, "\n\n")
+      .trim();
+    if (!navigator.share) {
+      elements.shareReceiptButton.textContent = "Sharing unavailable";
+      return;
+    }
+    try {
+      await navigator.share({
+        title: "Vedrix POS receipt",
+        text: receiptText
+      });
+    } catch (error) {
+      // Closing Android's share sheet is a normal cancellation, so the receipt
+      // remains open and ready for another printing method.
+    }
+  }
+
   elements.printReceiptButton.addEventListener("click", printThermalReceipt);
+  elements.shareReceiptButton.addEventListener("click", shareReceiptToPrinter);
   elements.closeReceiptButton.addEventListener("click", () => elements.receiptDialog.close());
   elements.registerLoginButton.addEventListener("click", () => setLoginRole("register"));
   elements.managerLoginButton.addEventListener("click", () => setLoginRole("back-office"));
