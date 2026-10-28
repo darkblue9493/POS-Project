@@ -1688,6 +1688,43 @@
     printWindow.document.close();
   }
 
+  function receiptImageBlob() {
+    return new Promise((resolve, reject) => {
+      const width = 576; // 72 mm at the common 203 dpi thermal-printer resolution.
+      const measure = document.createElement("div");
+      measure.className = "receipt";
+      measure.style.cssText = `position:fixed;left:-10000px;top:0;width:${width}px;padding:28px 32px;background:#fff;color:#111;font:20px/1.3 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;`;
+      measure.innerHTML = elements.receiptContent.innerHTML;
+      document.body.appendChild(measure);
+      const height = Math.max(320, Math.ceil(measure.scrollHeight + 20));
+      measure.remove();
+      const content = elements.receiptContent.innerHTML;
+      const markup = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
+        <foreignObject width="100%" height="100%"><div xmlns="http://www.w3.org/1999/xhtml" class="receipt" style="width:${width}px;box-sizing:border-box;padding:28px 32px;background:#fff;color:#111;font:20px/1.3 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;">
+          <style>
+            h3,p{margin:0 0 14px}h3,p:last-child,.receipt-contact,.receipt-coupon{text-align:center}.receipt-line{display:flex;justify-content:space-between;gap:16px;margin:8px 0}.receipt-item-barcode{text-align:center;margin:0 0 14px}.receipt-barcode{display:block;width:448px;height:auto;margin:8px auto 16px;fill:#111;shape-rendering:crispEdges}.receipt-barcode text{font:16px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;letter-spacing:1px}.receipt-coupon{display:grid;gap:7px;padding:12px 0}.receipt-coupon span{font-size:23px;font-weight:700}.receipt-coupon small{font-size:15px}hr{border:0;border-top:1px solid #777;margin:14px 0}
+          </style>${content}</div></foreignObject></svg>`;
+      const source = URL.createObjectURL(new Blob([markup], { type: "image/svg+xml" }));
+      const image = new Image();
+      image.onload = () => {
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const context = canvas.getContext("2d");
+        context.fillStyle = "#fff";
+        context.fillRect(0, 0, width, height);
+        context.drawImage(image, 0, 0);
+        URL.revokeObjectURL(source);
+        canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error("Could not create receipt image")), "image/png");
+      };
+      image.onerror = () => {
+        URL.revokeObjectURL(source);
+        reject(new Error("Could not create receipt image"));
+      };
+      image.src = source;
+    });
+  }
+
   async function shareReceiptToPrinter() {
     const receiptText = elements.receiptContent.innerText
       .replace(/\n{3,}/g, "\n\n")
@@ -1697,10 +1734,12 @@
       return;
     }
     try {
-      await navigator.share({
-        title: "Vedrix POS receipt",
-        text: receiptText
-      });
+      const receiptImage = new File([await receiptImageBlob()], "vedrix-receipt.png", { type: "image/png" });
+      if (navigator.canShare && navigator.canShare({ files: [receiptImage] })) {
+        await navigator.share({ title: "Vedrix POS receipt", text: "Receipt ready to print", files: [receiptImage] });
+      } else {
+        await navigator.share({ title: "Vedrix POS receipt", text: receiptText });
+      }
     } catch (error) {
       // Closing Android's share sheet is a normal cancellation, so the receipt
       // remains open and ready for another printing method.
