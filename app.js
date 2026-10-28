@@ -1276,11 +1276,15 @@
     const value = receiptBarcodeValue(item);
     const eanParity = ["LLLLLL", "LLGLGG", "LLGGLG", "LLGGGL", "LGLLGG", "LGGLLG", "LGGGLL", "LGLGLG", "LGLGGL", "LGGLGL"];
     const invert = (pattern) => pattern.split("").map((bit) => bit === "1" ? "0" : "1").join("");
+    // EAN-13 has three different digit encodings. G is the reverse-complement
+    // of L; using only the complement creates bars that look plausible but a
+    // retail scanner cannot decode them.
+    const gPattern = (pattern) => invert(pattern).split("").reverse().join("");
     const isEan13 = value.length === 13;
     const leftDigits = isEan13 ? value.slice(1, 7) : value.slice(0, 6);
     const rightDigits = isEan13 ? value.slice(7) : value.slice(6);
     const parity = isEan13 ? eanParity[Number(value[0])] : "LLLLLL";
-    const leftBits = leftDigits.split("").map((digit, position) => parity[position] === "G" ? invert(patterns[Number(digit)]) : patterns[Number(digit)]).join("");
+    const leftBits = leftDigits.split("").map((digit, position) => parity[position] === "G" ? gPattern(patterns[Number(digit)]) : patterns[Number(digit)]).join("");
     const bits = `101${leftBits}01010${rightDigits.split("").map((digit) => invert(patterns[Number(digit)])).join("")}101`;
     const guardPositions = new Set([0, 1, 2, 45, 46, 47, 48, 49, 92, 93, 94]);
     const bars = [];
