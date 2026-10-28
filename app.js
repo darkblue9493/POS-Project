@@ -1690,38 +1690,88 @@
 
   function receiptImageBlob() {
     return new Promise((resolve, reject) => {
-      const width = 576; // 72 mm at the common 203 dpi thermal-printer resolution.
-      const measure = document.createElement("div");
-      measure.className = "receipt";
-      measure.style.cssText = `position:fixed;left:-10000px;top:0;width:${width}px;padding:28px 32px;background:#fff;color:#111;font:20px/1.3 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;`;
-      measure.innerHTML = elements.receiptContent.innerHTML;
-      document.body.appendChild(measure);
-      const height = Math.max(320, Math.ceil(measure.scrollHeight + 20));
-      measure.remove();
-      const content = elements.receiptContent.innerHTML;
-      const markup = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
-        <foreignObject width="100%" height="100%"><div xmlns="http://www.w3.org/1999/xhtml" class="receipt" style="width:${width}px;box-sizing:border-box;padding:28px 32px;background:#fff;color:#111;font:20px/1.3 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;">
-          <style>
-            h3,p{margin:0 0 14px}h3,p:last-child,.receipt-contact,.receipt-coupon{text-align:center}.receipt-line{display:flex;justify-content:space-between;gap:16px;margin:8px 0}.receipt-item-barcode{text-align:center;margin:0 0 14px}.receipt-barcode{display:block;width:448px;height:auto;margin:8px auto 16px;fill:#111;shape-rendering:crispEdges}.receipt-barcode text{font:16px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;letter-spacing:1px}.receipt-coupon{display:grid;gap:7px;padding:12px 0}.receipt-coupon span{font-size:23px;font-weight:700}.receipt-coupon small{font-size:15px}hr{border:0;border-top:1px solid #777;margin:14px 0}
-          </style>${content}</div></foreignObject></svg>`;
-      const source = URL.createObjectURL(new Blob([markup], { type: "image/svg+xml" }));
-      const image = new Image();
-      image.onload = () => {
-        const canvas = document.createElement("canvas");
-        canvas.width = width;
-        canvas.height = height;
-        const context = canvas.getContext("2d");
-        context.fillStyle = "#fff";
-        context.fillRect(0, 0, width, height);
-        context.drawImage(image, 0, 0);
-        URL.revokeObjectURL(source);
-        canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error("Could not create receipt image")), "image/png");
+      const width = 576; // 72 mm at 203 dpi, the configured printer resolution.
+      const margin = 32;
+      const source = document.createElement("canvas");
+      source.width = width;
+      source.height = 6000;
+      const context = source.getContext("2d");
+      context.fillStyle = "#fff";
+      context.fillRect(0, 0, source.width, source.height);
+      context.fillStyle = "#111";
+      context.textBaseline = "top";
+      let y = 28;
+      const maxWidth = width - margin * 2;
+      const writeWrapped = (text, x, align = "left", bold = false, size = 20) => {
+        context.font = `${bold ? "700" : "400"} ${size}px ui-monospace, monospace`;
+        context.textAlign = align;
+        String(text).split("\n").forEach((paragraph) => {
+          const words = paragraph.split(/\s+/).filter(Boolean);
+          let line = "";
+          words.forEach((word) => {
+            const candidate = line ? `${line} ${word}` : word;
+            if (context.measureText(candidate).width > maxWidth && line) {
+              context.fillText(line, x, y);
+              y += size + 7;
+              line = word;
+            } else {
+              line = candidate;
+            }
+          });
+          context.fillText(line, x, y);
+          y += size + 7;
+        });
       };
-      image.onerror = () => {
-        URL.revokeObjectURL(source);
-        reject(new Error("Could not create receipt image"));
-      };
-      image.src = source;
+      const receiptChildren = Array.from(elements.receiptContent.children);
+      receiptChildren.forEach((node) => {
+        if (node.tagName === "H3") {
+          writeWrapped(node.textContent, width / 2, "center", true, 22);
+          y += 8;
+        } else if (node.tagName === "P") {
+          writeWrapped(node.innerText, node.classList.contains("receipt-contact") ? width / 2 : margin, node.classList.contains("receipt-contact") ? "center" : "left", false, 19);
+          y += 5;
+        } else if (node.classList.contains("receipt-line")) {
+          const label = node.querySelector("span")?.textContent || "";
+          const amount = node.querySelector("strong")?.textContent || "";
+          context.font = "400 19px ui-monospace, monospace";
+          context.textAlign = "left";
+          context.fillText(label, margin, y);
+          context.font = "700 19px ui-monospace, monospace";
+          context.textAlign = "right";
+          context.fillText(amount, width - margin, y);
+          y += 28;
+        } else if (node.classList.contains("receipt-item-barcode")) {
+          const barcode = node.querySelector("svg");
+          const barcodeWidth = 448;
+          const barcodeX = (width - barcodeWidth) / 2;
+          const scale = barcodeWidth / 230;
+          barcode?.querySelectorAll("rect").forEach((bar) => {
+            context.fillRect(
+              barcodeX + Number(bar.getAttribute("x")) * scale,
+              y + Number(bar.getAttribute("y")) * scale,
+              Number(bar.getAttribute("width")) * scale,
+              Number(bar.getAttribute("height")) * scale
+            );
+          });
+          const value = barcode?.getAttribute("aria-label")?.replace(/\D/g, "") || "";
+          context.font = "16px ui-monospace, monospace";
+          context.textAlign = "center";
+          context.fillText(value, width / 2, y + 103);
+          y += 132;
+        } else if (node.tagName === "HR") {
+          context.fillRect(margin, y + 5, maxWidth, 1);
+          y += 18;
+        } else if (node.classList.contains("receipt-coupon")) {
+          Array.from(node.children).forEach((child, index) => writeWrapped(child.textContent, width / 2, "center", index < 2, index === 1 ? 24 : 18));
+          y += 8;
+        }
+      });
+      const output = document.createElement("canvas");
+      output.width = width;
+      output.height = Math.ceil(y + 28);
+      const outputContext = output.getContext("2d");
+      outputContext.drawImage(source, 0, 0, width, output.height, 0, 0, width, output.height);
+      output.toBlob((blob) => blob ? resolve(blob) : reject(new Error("Could not create receipt image")), "image/png");
     });
   }
 
@@ -1741,8 +1791,8 @@
         await navigator.share({ title: "Vedrix POS receipt", text: receiptText });
       }
     } catch (error) {
-      // Closing Android's share sheet is a normal cancellation, so the receipt
-      // remains open and ready for another printing method.
+      elements.shareReceiptButton.textContent = "Could not share receipt";
+      setTimeout(() => { elements.shareReceiptButton.textContent = "Send full receipt"; }, 2200);
     }
   }
 
