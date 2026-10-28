@@ -1656,10 +1656,10 @@
     const receipt = elements.receiptContent.innerHTML;
     printWindow.document.write(`<!doctype html>
       <html><head><meta charset="utf-8"><title>Vedrix receipt</title>
-      <style id="thermalPageSize">@page { size: 80mm 120mm; margin: 0; }</style>
+      <style id="thermalPageSize">@page { size: 72mm 120mm; margin: 0; }</style>
       <style>
         * { box-sizing: border-box; }
-        html, body { width: 80mm; min-height: 0; margin: 0; padding: 0; background: #fff; color: #111; }
+        html, body { width: 72mm; min-height: 0; margin: 0; padding: 0; background: #fff; color: #111; }
         body { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
         .receipt { width: 72mm; margin: 0 auto; padding: 4mm 0 5mm; font-size: 11pt; line-height: 1.25; }
         .receipt h3, .receipt p { margin: 0 0 3mm; }
@@ -1679,7 +1679,7 @@
           const receipt = document.getElementById('thermalReceipt');
           const pixelsPerMillimeter = 96 / 25.4;
           const receiptHeight = Math.max(70, Math.ceil((receipt.getBoundingClientRect().height + 12) / pixelsPerMillimeter));
-          document.getElementById('thermalPageSize').textContent = '@page { size: 80mm ' + receiptHeight + 'mm; margin: 0; }';
+          document.getElementById('thermalPageSize').textContent = '@page { size: 72mm ' + receiptHeight + 'mm; margin: 0; }';
           setTimeout(() => print(), 120);
         });
         addEventListener('afterprint', () => close());

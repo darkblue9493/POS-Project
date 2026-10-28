@@ -1603,7 +1603,7 @@ dialog::backdrop {
 
   html,
   body {
-    width: 80mm;
+    width: 72mm;
     min-height: 0;
     margin: 0;
     padding: 0;
@@ -1623,7 +1623,7 @@ dialog::backdrop {
     display: block;
     position: static;
     width: 100%;
-    max-width: 80mm;
+    max-width: 72mm;
     min-height: 0;
     margin: 0;
     padding: 0;
