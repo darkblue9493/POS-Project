@@ -1598,7 +1598,6 @@ dialog::backdrop {
 
 @media print {
   @page {
-    size: 80mm auto;
     margin: 0;
   }
 
@@ -1623,7 +1622,7 @@ dialog::backdrop {
   #receiptDialog {
     display: block;
     position: static;
-    width: 80mm;
+    width: 100%;
     max-width: 80mm;
     min-height: 0;
     margin: 0;
@@ -1635,18 +1634,20 @@ dialog::backdrop {
   }
 
   .receipt {
-    width: 72mm;
-    max-width: 72mm;
+    width: 64mm;
+    max-width: 64mm;
     box-sizing: border-box;
     margin: 0 auto;
     padding: 4mm 0 5mm;
     font-size: 11pt;
     line-height: 1.25;
+    break-inside: avoid;
+    page-break-inside: avoid;
   }
 
   .receipt-barcode {
-    width: 68mm;
-    max-width: 68mm;
+    width: 56mm;
+    max-width: 56mm;
     height: auto;
     min-height: 20mm;
     margin: 1mm auto 3mm;
