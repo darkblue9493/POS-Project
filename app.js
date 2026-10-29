@@ -1791,6 +1791,9 @@
       } else {
         await navigator.share({ title: "Vedrix POS receipt", text: receiptText });
       }
+      // A completed share means Android has handed the receipt to the selected
+      // printer app. The sale is already saved, so return straight to the POS.
+      elements.receiptDialog.close();
     } catch (error) {
       elements.shareReceiptButton.textContent = "Could not share receipt";
       setTimeout(() => { elements.shareReceiptButton.textContent = "Send full receipt"; }, 2200);
