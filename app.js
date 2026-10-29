@@ -1230,11 +1230,12 @@
       <p>Order #${order.id}<br>${new Date(order.createdAt).toLocaleString()}<br>${escapeHtml(order.customer)}<br>Cashier: ${escapeHtml(order.cashierName || "Cashier 1")}<br>${escapeHtml(order.source || "In Store")}</p>
       ${order.note ? `<p>Note: ${escapeHtml(order.note)}</p>` : ""}
       ${order.items
+        .flatMap((item) => Array.from({ length: Math.max(1, Math.floor(Number(item.qty) || 1)) }, () => item))
         .map(
           (item) => `
             <div class="receipt-line">
-              <span>${item.qty} x ${escapeHtml(item.name)}</span>
-              <strong>${price(item.qty * item.price)}</strong>
+              <span>1 x ${escapeHtml(item.name)}</span>
+              <strong>${price(item.price)}</strong>
             </div>
             <div class="receipt-item-barcode">
               ${barcodeSvg(item)}
