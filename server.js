@@ -10,6 +10,10 @@ let dbPath = path.join(dataDir, "pos-db.json");
 const supabaseUrl = String(process.env.SUPABASE_URL || "").replace(/\/+$/, "");
 const supabaseServiceRoleKey = String(process.env.SUPABASE_SERVICE_ROLE_KEY || "");
 const supabaseEnabled = Boolean(supabaseUrl && supabaseServiceRoleKey);
+// A cloud host's local filesystem is temporary. Never quietly use it as the
+// business database: a restart or deployment would appear to delete sales,
+// receipts, and manager changes.
+const persistentStorageRequired = String(process.env.PERSISTENCE_REQUIRED || "").toLowerCase() === "true";
 const port = Number(process.env.PORT || 4188);
 const posPin = String(process.env.POS_PIN || "1234");
 const registerPin = String(process.env.REGISTER_PIN || posPin);
@@ -256,7 +260,12 @@ async function writeSupabaseState(db) {
 }
 
 async function readDb() {
-  if (!supabaseEnabled) return readDbFile();
+  if (!supabaseEnabled) {
+    if (persistentStorageRequired) {
+      throw new Error("Persistent storage is not configured. Add SUPABASE_SERVICE_ROLE_KEY in Render before using Vedrix POS.");
+    }
+    return readDbFile();
+  }
   try {
     const response = await supabaseRequest("/rest/v1/pos_state?id=eq.primary&select=state");
     const rows = await response.json();
@@ -265,15 +274,26 @@ async function readDb() {
     await writeSupabaseState(legacyState);
     return legacyState;
   } catch (error) {
+    if (persistentStorageRequired) {
+      throw new Error(`Persistent storage is unavailable: ${error.message}`);
+    }
     console.error(`Supabase storage unavailable; using local storage: ${error.message}`);
     return readDbFile();
   }
 }
 
 async function writeDb(db) {
-  writeDbFile(db);
-  if (!supabaseEnabled) return;
+  if (!supabaseEnabled) {
+    if (persistentStorageRequired) {
+      throw new Error("Persistent storage is not configured. Add SUPABASE_SERVICE_ROLE_KEY in Render before using Vedrix POS.");
+    }
+    writeDbFile(db);
+    return;
+  }
+  // Store to Supabase first. A failed cloud write must be visible to Vedrix
+  // instead of leaving the user with data that only exists until a restart.
   await writeSupabaseState(db);
+  writeDbFile(db);
 }
 
 async function handleApi(req, res, url) {

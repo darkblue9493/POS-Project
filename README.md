@@ -22,12 +22,12 @@ To use it anywhere:
 1. Upload this `pos project` folder to a hosting service that runs Node apps, such as Render.
 2. Set the app start command to `npm start`.
 3. In your Supabase SQL Editor, run [`supabase/schema.sql`](supabase/schema.sql) once.
-4. Set `SUPABASE_URL` to your project URL and add `SUPABASE_SERVICE_ROLE_KEY` as a secret. The service-role key stays on the Node server and is never sent to a browser.
+4. Set `SUPABASE_URL` to your project URL and add `SUPABASE_SERVICE_ROLE_KEY` as a secret. The service-role key stays on the Node server and is never sent to a browser. In Supabase, copy it from **Project Settings → API → service_role**; in Render, add it under **Environment → Add Environment Variable**.
 5. Set `REGISTER_PIN` to the PIN cashiers use.
 6. Set `BACK_OFFICE_PIN` to the manager/back-office PIN. It defaults to `4415` when this variable is not set.
 7. Open the live website address from any register, tablet, or phone.
 
-The included `render.yaml` includes the Supabase project URL. Add the service-role key in Render's Environment settings to make Supabase the persistent shared store. Without that key, Vedrix POS falls back to local JSON storage, which can reset after a deploy or restart.
+The included `render.yaml` includes the Supabase project URL. Add the service-role key in Render's Environment settings to make Supabase the persistent shared store. The hosted app refuses to run without working persistent storage, so a configuration issue is visible before it can cause data loss.
 
 Live paths:
 

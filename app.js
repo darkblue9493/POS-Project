@@ -326,7 +326,9 @@
   function loadState() {
     try {
       const saved = JSON.parse(localStorage.getItem(storageKey));
-      if (!saved || saved.menuVersion !== defaultState.menuVersion) return structuredClone(defaultState);
+      // A menu/app update must never be treated as permission to discard the
+      // store's locally cached receipts or manager configuration.
+      if (!saved) return structuredClone(defaultState);
       const merged = saved ? { ...defaultState, ...saved, settings: { ...defaultState.settings, ...saved.settings } } : structuredClone(defaultState);
       merged.stores = Array.isArray(merged.stores) && merged.stores.length ? merged.stores : defaultState.stores;
       merged.stores = merged.stores.map((store) => ({ ...store, pin: String(store.pin || "1234") }));
@@ -342,6 +344,44 @@
     } catch (error) {
       return structuredClone(defaultState);
     }
+  }
+
+  function defaultRetailBarcode(itemId) {
+    const index = defaultState.items.findIndex((item) => item.id === itemId);
+    if (index < 0) return "";
+    const base = String(899011000609 + index);
+    const sum = base.split("").reduce((total, digit, position) => total + Number(digit) * (position % 2 === 0 ? 1 : 3), 0);
+    return `${base}${(10 - (sum % 10)) % 10}`;
+  }
+
+  function hasOnlyBaselineItems(items) {
+    if (!Array.isArray(items) || items.length !== defaultState.items.length) return false;
+    return items.every((item) => {
+      const baseline = defaultState.items.find((candidate) => candidate.id === item.id);
+      if (!baseline) return false;
+      const code = String(item.barcode || item.sku || "");
+      const expectedCodes = ["", item.id, defaultRetailBarcode(item.id)];
+      const extraItemSetting = Object.entries(item).some(([key, value]) => !["id", "name", "category", "price", "tender", "storeId", "stock", "cost", "barcode", "sku"].includes(key) && value !== undefined && value !== null && value !== "");
+      return item.name === baseline.name && item.category === baseline.category && Number(item.price) === Number(baseline.price) &&
+        Boolean(item.tender) === Boolean(baseline.tender) && Number(item.stock || 0) === 0 && Number(item.cost || 0) === 0 && expectedCodes.includes(code) && !extraItemSetting;
+    });
+  }
+
+  function hasOnlyBaselineStores(stores) {
+    return Array.isArray(stores) && stores.length === 1 && stores[0].id === defaultState.stores[0].id &&
+      stores[0].name === defaultState.stores[0].name && String(stores[0].address || "") === "" && String(stores[0].pin || "1234") === "1234" &&
+      !Object.entries(stores[0]).some(([key, value]) => !["id", "name", "address", "pin"].includes(key) && value !== undefined && value !== null && value !== "");
+  }
+
+  function hasBusinessData(saved) {
+    if (!saved) return false;
+    if ((saved.orders || []).length || (saved.waste || []).length || (saved.coupons || []).length || (saved.users || []).length || (saved.promotions || []).length) return true;
+    return !hasOnlyBaselineItems(saved.items) || !hasOnlyBaselineStores(saved.stores) || JSON.stringify(saved.settings || {}) !== JSON.stringify(defaultState.settings);
+  }
+
+  function isPristineBusinessState(saved) {
+    return !saved || (!((saved.orders || []).length) && !((saved.waste || []).length) && !((saved.coupons || []).length) && !((saved.users || []).length) && !((saved.promotions || []).length) &&
+      hasOnlyBaselineItems(saved.items) && hasOnlyBaselineStores(saved.stores) && JSON.stringify(saved.settings || {}) === JSON.stringify(defaultState.settings));
   }
 
   function saveState() {
@@ -368,9 +408,11 @@
     if (!remoteMode) return;
     try {
       const data = initialData || await api("/api/state");
+      const cachedState = state;
+      const recoverCachedState = isPristineBusinessState(data.state) && hasBusinessData(cachedState);
       state = {
         ...state,
-        ...data.state,
+        ...(recoverCachedState ? cachedState : data.state),
         activeCategory: "All",
         selectedStoreId: preferredStoreId || getRequestedStoreId() || state.selectedStoreId,
         orderType: state.orderType,
@@ -379,6 +421,11 @@
       };
       currentCashierName = preferredCashierName || data.session?.cashierName || "Cashier 1";
       hydrated = true;
+      if (recoverCachedState) {
+        // If a hosted database was temporarily empty, preserve the data still
+        // cached on this POS device instead of replacing it with starter data.
+        await persistNow();
+      }
       setLoginVisible(false);
       render(true);
       setView(getAllowedViews()[0]);
