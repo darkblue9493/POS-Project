@@ -305,7 +305,17 @@ async function handleApi(req, res, url) {
     }
     try {
       await supabaseRequest("/rest/v1/pos_state?select=id&limit=1");
-      sendJson(res, 200, { ok: true, persistent: true, backend: "Supabase" });
+      // Reading an RLS-protected table can succeed with an anon key while
+      // returning no rows. A short-lived probe proves the server can perform
+      // the writes Vedrix needs before we call storage healthy.
+      const probeId = "__vedrix_connection_probe__";
+      await supabaseRequest("/rest/v1/pos_state", {
+        method: "POST",
+        headers: { Prefer: "resolution=merge-duplicates,return=minimal" },
+        body: JSON.stringify([{ id: probeId, state: {}, updated_at: new Date().toISOString() }])
+      });
+      await supabaseRequest(`/rest/v1/pos_state?id=eq.${probeId}`, { method: "DELETE" });
+      sendJson(res, 200, { ok: true, persistent: true, backend: "Supabase", writeAccess: true });
     } catch (error) {
       sendJson(res, 503, { ok: false, persistent: false, message: error.message });
     }
