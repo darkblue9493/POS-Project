@@ -13,7 +13,8 @@ const supabaseEnabled = Boolean(supabaseUrl && supabaseServiceRoleKey);
 // A cloud host's local filesystem is temporary. Never quietly use it as the
 // business database: a restart or deployment would appear to delete sales,
 // receipts, and manager changes.
-const persistentStorageRequired = String(process.env.PERSISTENCE_REQUIRED || "").toLowerCase() === "true";
+const persistentStorageRequired = String(process.env.PERSISTENCE_REQUIRED || "").toLowerCase() === "true" ||
+  Boolean(process.env.RENDER || process.env.RENDER_SERVICE_ID || process.env.RENDER_EXTERNAL_URL);
 const port = Number(process.env.PORT || 4188);
 const posPin = String(process.env.POS_PIN || "1234");
 const registerPin = String(process.env.REGISTER_PIN || posPin);
@@ -297,6 +298,20 @@ async function writeDb(db) {
 }
 
 async function handleApi(req, res, url) {
+  if (req.method === "GET" && url.pathname === "/api/storage-status") {
+    if (!supabaseEnabled) {
+      sendJson(res, 503, { ok: false, persistent: false, message: "SUPABASE_SERVICE_ROLE_KEY is missing." });
+      return;
+    }
+    try {
+      await supabaseRequest("/rest/v1/pos_state?select=id&limit=1");
+      sendJson(res, 200, { ok: true, persistent: true, backend: "Supabase" });
+    } catch (error) {
+      sendJson(res, 503, { ok: false, persistent: false, message: error.message });
+    }
+    return;
+  }
+
   if (req.method === "POST" && url.pathname === "/api/login") {
     const body = await readBody(req);
     const role = body.mode === "back-office" ? "back-office" : "register";
