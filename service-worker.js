@@ -1,11 +1,11 @@
-const cacheName = "vedrix-pos-v11";
+const cacheName = "vedrix-pos-v12";
 const assets = [
   "./",
   "./index.html",
   "./register.html",
   "./back-office.html",
   "./styles.css",
-  "./app.js",
+  "./app.js?v=20261121a",
   "./manifest.webmanifest",
   "./icon.svg"
 ];

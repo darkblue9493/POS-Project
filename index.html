@@ -7,7 +7,7 @@
     <meta name="theme-color" content="#16241d" />
     <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="preload" href="./styles.css?v=20261028b" as="style" />
-    <link rel="preload" href="./app.js?v=20261101a" as="script" />
+    <link rel="preload" href="./app.js?v=20261121a" as="script" />
     <link rel="stylesheet" href="./styles.css?v=20261028b" />
   </head>
   <body>
@@ -236,7 +236,7 @@
               <button type="button" class="pos-action customer-action" data-focus-customer>Customer<br>Name</button>
               <button type="button" class="pos-action" data-void-line>Void<br>Delete</button>
               <button type="button" class="pos-action" data-start-over>Start<br>Over</button>
-              <button type="button" class="pos-action" data-show-last-receipt>Show<br>Receipt</button>
+              <button type="button" class="pos-action" data-show-last-receipt>Last<br>Receipt</button>
               <button type="button" class="pos-action" data-toggle-discount>Discount</button>
               <button type="button" class="pos-action" id="couponCodeButton">Coupon<br>Code</button>
               <button type="button" class="pos-action waste-action" id="openWasteButton">Wastage</button>
@@ -304,6 +304,7 @@
                   <th>Source</th>
                   <th>Total</th>
                   <th>Time</th>
+                  <th>Receipt</th>
                 </tr>
               </thead>
               <tbody id="ordersTableBody"></tbody>
@@ -411,6 +412,10 @@
               <input id="settingsStoreName" type="text" />
             </label>
             <label>
+              <span>Store time zone</span>
+              <input id="settingsTimeZone" type="text" placeholder="America/New_York" required />
+            </label>
+            <label>
               <span>Sales tax percent</span>
               <input id="settingsTaxRate" type="number" min="0" max="25" step="0.01" />
             </label>
@@ -515,7 +520,7 @@
       </form>
     </dialog>
 
-    <script src="./app.js?v=20261101a"></script>
+    <script src="./app.js?v=20261121a"></script>
     <script>
       if ("serviceWorker" in navigator && location.protocol !== "file:") {
         navigator.serviceWorker.register("./service-worker.js");

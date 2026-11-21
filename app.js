@@ -1,6 +1,7 @@
 (function () {
   const storageKey = "customStorePos.v1";
   const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
+  const defaultStoreTimeZone = "America/New_York";
   const remoteMode = location.protocol !== "file:";
 
   const defaultState = {
@@ -196,6 +197,7 @@
     newRegisterStoreSelect: document.getElementById("newRegisterStoreSelect"),
     registerList: document.getElementById("registerList"),
     settingsStoreName: document.getElementById("settingsStoreName"),
+    settingsTimeZone: document.getElementById("settingsTimeZone"),
     settingsTaxRate: document.getElementById("settingsTaxRate"),
     settingsReceiptFooter: document.getElementById("settingsReceiptFooter"),
     settingsReceiptHeader: document.getElementById("settingsReceiptHeader"),
@@ -228,6 +230,7 @@
 
   let state = loadState();
   let hydrated = !remoteMode;
+  let savedManagerOrders = null;
   let saveTimer = null;
   const appMode = getAppMode();
   let loginRole = appMode;
@@ -427,7 +430,7 @@
         await persistNow();
       }
       setLoginVisible(false);
-      render(true);
+      if (appMode === "back-office") savedManagerOrders = state.orders;
       setView(getAllowedViews()[0]);
     } catch (error) {
       setLoginVisible(true);
@@ -454,6 +457,7 @@
           coupons: state.coupons,
         }),
       });
+      if (appMode === "back-office") await refreshRemoteState();
     } catch (error) {
       elements.modeLabel.textContent = "Offline changes";
     }
@@ -562,7 +566,7 @@
     const targetView = allowed.includes(viewName) ? viewName : allowed[0];
     elements.tabs.forEach((tab) => tab.classList.toggle("active", tab.dataset.view === targetView));
     elements.views.forEach((view) => view.classList.toggle("active", view.id === `${targetView}View`));
-    render();
+    render(true);
   }
 
   function render(skipSave = false) {
@@ -573,6 +577,8 @@
     elements.modeLabel.textContent = remoteMode ? "Shared mode" : "Local mode";
     elements.ticketNumber.textContent = `Order #${state.nextOrderNumber}`;
     elements.settingsStoreName.value = selectedStore.name;
+    elements.settingsTimeZone.value = selectedStore.timeZone || defaultStoreTimeZone;
+    elements.settingsTimeZone.setCustomValidity("");
     elements.settingsTaxRate.value = selectedStore.taxRate ?? state.settings.taxRate;
     elements.settingsReceiptFooter.value = selectedStore.receiptFooter ?? state.settings.receiptFooter;
     elements.settingsReceiptHeader.value = selectedStore.receiptHeader ?? selectedStore.name;
@@ -605,7 +611,13 @@
     if (!remoteMode || !hydrated || document.hidden) return;
     try {
       const data = await api("/api/state");
-      const selectedStoreId = appMode === "register" ? (data.session?.storeId || state.selectedStoreId) : state.selectedStoreId;
+      if (appMode === "back-office") {
+        savedManagerOrders = data.state.orders;
+        renderDashboard();
+        renderOrders();
+        return;
+      }
+      const selectedStoreId = data.session?.storeId || state.selectedStoreId;
       const cart = state.cart;
       const activeCategory = state.activeCategory;
       const orderType = state.orderType;
@@ -880,13 +892,33 @@
     await persistNow();
   }
 
-  function getTodaysOrders() {
-    const today = new Date().toDateString();
-    return getSelectedStoreOrders().filter((order) => new Date(order.createdAt).toDateString() === today);
+  function storeDateFormatter(timeZone) {
+    return new Intl.DateTimeFormat("en-US", { timeZone, year: "numeric", month: "numeric", day: "numeric" });
   }
 
-  function getSelectedStoreOrders() {
-    return state.orders.filter((order) => (order.storeId || state.selectedStoreId) === state.selectedStoreId);
+  function getTodaysOrders() {
+    let dates;
+    try {
+      dates = storeDateFormatter(getSelectedStore().timeZone || defaultStoreTimeZone);
+    } catch (error) {
+      if (!(error instanceof RangeError)) throw error;
+      dates = storeDateFormatter(defaultStoreTimeZone);
+    }
+    const today = dates.format(new Date());
+    return getSelectedStoreOrders(savedManagerOrders ?? state.orders).filter((order) => {
+      const timestamp = Date.parse(order.createdAt);
+      return Number.isFinite(timestamp) && dates.format(timestamp) === today;
+    });
+  }
+
+  function getSelectedStoreOrders(orders = state.orders) {
+    return orders.filter((order) => {
+      const storeId = order.storeId
+        || state.registers.find((register) => register.id === order.registerId)?.storeId
+        || state.stores.find((store) => store.name === order.storeName)?.id
+        || defaultState.stores[0].id;
+      return storeId === state.selectedStoreId;
+    });
   }
 
   function getReportOrders() {
@@ -1266,7 +1298,7 @@
   }
 
   function getMostRecentOrder() {
-    return state.orders.find((order) => (order.storeId || state.selectedStoreId) === state.selectedStoreId);
+    return getSelectedStoreOrders()[0];
   }
 
   function showReceipt(order) {
@@ -1356,10 +1388,10 @@
 
   function renderOrders() {
     elements.ordersTableBody.innerHTML = "";
-    const orders = getSelectedStoreOrders();
+    const orders = getSelectedStoreOrders(savedManagerOrders ?? state.orders);
     if (!orders.length) {
       const row = document.createElement("tr");
-      row.innerHTML = '<td colspan="7">No orders yet</td>';
+      row.innerHTML = '<td colspan="8">No orders yet</td>';
       elements.ordersTableBody.appendChild(row);
       return;
     }
@@ -1373,6 +1405,7 @@
         <td>${escapeHtml(order.source || "In Store")}</td>
         <td>${price(order.totals.total)}</td>
         <td>${new Date(order.createdAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</td>
+        <td><button class="secondary-button" type="button">Show Receipt</button></td>
       `;
       row.addEventListener("click", () => showReceipt(order));
       elements.ordersTableBody.appendChild(row);
@@ -1607,7 +1640,8 @@
     state.selectedStoreId = elements.storeSelect.value;
     state.activeCategory = "All";
     state.cart = [];
-    render();
+    render(true);
+    if (hydrated) localStorage.setItem(storageKey, JSON.stringify(state));
   });
   document.querySelectorAll("[data-jump-register]").forEach((button) => button.addEventListener("click", () => setView("register")));
   document.querySelectorAll("[data-jump-items]").forEach((button) => button.addEventListener("click", () => setView("items")));
@@ -1996,9 +2030,20 @@
     render();
   });
 
+  elements.settingsTimeZone.addEventListener("input", () => elements.settingsTimeZone.setCustomValidity(""));
   elements.settingsForm.addEventListener("submit", async (event) => {
     event.preventDefault();
+    const timeZone = elements.settingsTimeZone.value.trim();
+    try {
+      storeDateFormatter(timeZone);
+    } catch (error) {
+      if (!(error instanceof RangeError)) throw error;
+      elements.settingsTimeZone.setCustomValidity("Enter a time zone such as America/New_York.");
+      elements.settingsTimeZone.reportValidity();
+      return;
+    }
     const selectedStore = getSelectedStore();
+    if (timeZone !== defaultStoreTimeZone || selectedStore.timeZone) selectedStore.timeZone = timeZone;
     selectedStore.name = elements.settingsStoreName.value.trim() || selectedStore.name;
     selectedStore.taxRate = Number(elements.settingsTaxRate.value) || 0;
     selectedStore.receiptFooter = elements.settingsReceiptFooter.value.trim();
@@ -2093,12 +2138,10 @@
     setLoginRole(appMode);
     setLoginVisible(true);
     loadRemoteState();
-    if (appMode === "register") {
-      window.setInterval(refreshRemoteState, 10000);
-      document.addEventListener("visibilitychange", () => {
-        if (!document.hidden) refreshRemoteState();
-      });
-    }
+    window.setInterval(refreshRemoteState, 10000);
+    document.addEventListener("visibilitychange", () => {
+      if (!document.hidden) refreshRemoteState();
+    });
   } else {
     render();
     setView(getAllowedViews()[0]);
