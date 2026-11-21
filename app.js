@@ -230,7 +230,7 @@
 
   let state = loadState();
   let hydrated = !remoteMode;
-  let savedManagerOrders = null;
+  let savedManagerState = null;
   let saveTimer = null;
   const appMode = getAppMode();
   let loginRole = appMode;
@@ -430,7 +430,7 @@
         await persistNow();
       }
       setLoginVisible(false);
-      if (appMode === "back-office") savedManagerOrders = state.orders;
+      if (appMode === "back-office") savedManagerState = state;
       setView(getAllowedViews()[0]);
     } catch (error) {
       setLoginVisible(true);
@@ -612,9 +612,10 @@
     try {
       const data = await api("/api/state");
       if (appMode === "back-office") {
-        savedManagerOrders = data.state.orders;
+        savedManagerState = data.state;
         renderDashboard();
         renderOrders();
+        renderReports();
         return;
       }
       const selectedStoreId = data.session?.storeId || state.selectedStoreId;
@@ -893,21 +894,42 @@
   }
 
   function storeDateFormatter(timeZone) {
-    return new Intl.DateTimeFormat("en-US", { timeZone, year: "numeric", month: "numeric", day: "numeric" });
+    return new Intl.DateTimeFormat("en-US", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" });
   }
 
-  function getTodaysOrders() {
-    let dates;
+  function getStoreDateFormatter() {
+    const savedStore = savedManagerState?.stores.find((store) => store.id === state.selectedStoreId);
     try {
-      dates = storeDateFormatter(getSelectedStore().timeZone || defaultStoreTimeZone);
+      return storeDateFormatter((savedStore ?? getSelectedStore()).timeZone || defaultStoreTimeZone);
     } catch (error) {
       if (!(error instanceof RangeError)) throw error;
-      dates = storeDateFormatter(defaultStoreTimeZone);
+      return storeDateFormatter(defaultStoreTimeZone);
     }
-    const today = dates.format(new Date());
-    return getSelectedStoreOrders(savedManagerOrders ?? state.orders).filter((order) => {
-      const timestamp = Date.parse(order.createdAt);
-      return Number.isFinite(timestamp) && dates.format(timestamp) === today;
+  }
+
+  function storeDateKey(dates, timestamp) {
+    const parts = Object.fromEntries(dates.formatToParts(timestamp).map(({ type, value }) => [type, value]));
+    return `${parts.year}-${parts.month}-${parts.day}`;
+  }
+
+  function daysBefore(dateKey, days) {
+    const date = new Date(`${dateKey}T00:00:00Z`);
+    date.setUTCDate(date.getUTCDate() - days);
+    return date.toISOString().slice(0, 10);
+  }
+
+  function filterByStoreDates(entries, range) {
+    if (range === "all") return entries;
+    const dates = getStoreDateFormatter();
+    const today = storeDateKey(dates, Date.now());
+    const start = range === "custom" ? elements.reportStartDate.value
+      : range === "today" ? today : daysBefore(today, Number(range) - 1);
+    const end = range === "custom" ? elements.reportEndDate.value : today;
+    return entries.filter((entry) => {
+      const timestamp = Date.parse(entry.createdAt);
+      if (!Number.isFinite(timestamp)) return false;
+      const date = storeDateKey(dates, timestamp);
+      return (!start || date >= start) && (!end || date <= end);
     });
   }
 
@@ -916,56 +938,41 @@
       const storeId = order.storeId
         || state.registers.find((register) => register.id === order.registerId)?.storeId
         || state.stores.find((store) => store.name === order.storeName)?.id
-        || defaultState.stores[0].id;
+        || (state.stores.length === 1 ? state.stores[0].id : defaultState.stores[0].id);
       return storeId === state.selectedStoreId;
     });
   }
 
+  function getSavedStoreOrders() {
+    return getSelectedStoreOrders(savedManagerState?.orders ?? state.orders);
+  }
+
   function getReportOrders() {
-    const range = elements.reportRange ? elements.reportRange.value : "today";
-    const orders = state.orders.filter((order) => (order.storeId || state.selectedStoreId) === state.selectedStoreId);
-    if (range === "all") return orders;
-    if (range === "custom") {
-      const start = elements.reportStartDate.value ? new Date(`${elements.reportStartDate.value}T00:00:00`) : null;
-      const end = elements.reportEndDate.value ? new Date(`${elements.reportEndDate.value}T23:59:59.999`) : null;
-      return orders.filter((order) => (!start || new Date(order.createdAt) >= start) && (!end || new Date(order.createdAt) <= end));
-    }
-    const now = new Date();
-    if (range === "today") return orders.filter((order) => new Date(order.createdAt).toDateString() === now.toDateString());
-    const cutoff = new Date(now);
-    cutoff.setHours(0, 0, 0, 0);
-    cutoff.setDate(cutoff.getDate() - (Number(range) - 1));
-    return orders.filter((order) => new Date(order.createdAt) >= cutoff);
+    return filterByStoreDates(getSavedStoreOrders(), elements.reportRange.value);
   }
 
   function getReportWaste() {
-    const range = elements.reportRange ? elements.reportRange.value : "today";
-    const entries = state.waste.filter((entry) => entry.storeId === state.selectedStoreId);
-    if (range === "all") return entries;
-    if (range === "custom") {
-      const start = elements.reportStartDate.value ? new Date(`${elements.reportStartDate.value}T00:00:00`) : null;
-      const end = elements.reportEndDate.value ? new Date(`${elements.reportEndDate.value}T23:59:59.999`) : null;
-      return entries.filter((entry) => (!start || new Date(entry.createdAt) >= start) && (!end || new Date(entry.createdAt) <= end));
-    }
-    const now = new Date();
-    if (range === "today") return entries.filter((entry) => new Date(entry.createdAt).toDateString() === now.toDateString());
-    const cutoff = new Date(now);
-    cutoff.setHours(0, 0, 0, 0);
-    cutoff.setDate(cutoff.getDate() - (Number(range) - 1));
-    return entries.filter((entry) => new Date(entry.createdAt) >= cutoff);
+    const entries = (savedManagerState?.waste ?? state.waste).filter((entry) => entry.storeId === state.selectedStoreId);
+    return filterByStoreDates(entries, elements.reportRange.value);
   }
 
   function updateCustomRangeFields() {
     const custom = elements.reportRange.value === "custom";
     elements.customRangeFields.hidden = !custom;
     if (!custom) return;
-    const today = new Date().toISOString().slice(0, 10);
+    const today = storeDateKey(getStoreDateFormatter(), Date.now());
     if (!elements.reportEndDate.value) elements.reportEndDate.value = today;
-    if (!elements.reportStartDate.value) {
-      const start = new Date();
-      start.setDate(start.getDate() - 6);
-      elements.reportStartDate.value = start.toISOString().slice(0, 10);
-    }
+    if (!elements.reportStartDate.value) elements.reportStartDate.value = daysBefore(today, 6);
+  }
+
+  function orderDateTimeFormatter(options) {
+    const { timeZone } = getStoreDateFormatter().resolvedOptions();
+    return new Intl.DateTimeFormat(undefined, { ...options, timeZone });
+  }
+
+  function displayOrderDate(dates, createdAt) {
+    const timestamp = Date.parse(createdAt);
+    return Number.isFinite(timestamp) ? dates.format(timestamp) : "Date unavailable";
   }
 
   function renderReportRows(container, rows, emptyText) {
@@ -1079,8 +1086,9 @@
   }
 
   function renderDashboard() {
-    const orders = getTodaysOrders();
-    const total = orders.reduce((sum, order) => sum + Number(order.totals.total || 0), 0);
+    const orders = filterByStoreDates(getSavedStoreOrders(), "today");
+    const times = orderDateTimeFormatter({ timeStyle: "short" });
+    const total = orders.reduce((sum, order) => sum + Number(order.totals?.total || 0), 0);
     const paymentCounts = orders.reduce(
       (counts, order) => {
         counts[order.payment] = (counts[order.payment] || 0) + 1;
@@ -1100,7 +1108,7 @@
     if (!orders.length) {
       const empty = document.createElement("div");
       empty.className = "empty-state";
-      empty.textContent = "No orders yet";
+      empty.textContent = "No completed orders for the store’s local date.";
       elements.recentOrders.appendChild(empty);
       return;
     }
@@ -1110,8 +1118,8 @@
       row.className = "recent-order";
       row.type = "button";
       row.innerHTML = `
-        <strong>#${order.id} ${escapeHtml(order.customer)} - ${price(order.totals.total)}</strong>
-        <span>${escapeHtml(order.source || "In Store")} / ${escapeHtml(order.payment)} / ${new Date(order.createdAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</span>
+        <strong>#${order.id} ${escapeHtml(order.customer)} - ${price(order.totals?.total)}</strong>
+        <span>${escapeHtml(order.source || "In Store")} / ${escapeHtml(order.payment)} / ${displayOrderDate(times, order.createdAt)}</span>
       `;
       row.addEventListener("click", () => showReceipt(order));
       elements.recentOrders.appendChild(row);
@@ -1303,12 +1311,13 @@
 
   function showReceipt(order) {
     const selectedStore = getSelectedStore();
+    const dates = orderDateTimeFormatter({ dateStyle: "short", timeStyle: "medium" });
     elements.receiptContent.innerHTML = `
       <h3>${escapeHtml(order.receiptHeader || order.storeName || selectedStore.receiptHeader || selectedStore.name)}</h3>
       ${(order.receiptAddress || order.receiptPhone) ? `<p class="receipt-contact">${escapeHtml(order.receiptAddress || "")}${order.receiptAddress && order.receiptPhone ? "<br>" : ""}${escapeHtml(order.receiptPhone || "")}</p>` : ""}
-      <p>Order #${order.id}<br>${new Date(order.createdAt).toLocaleString()}<br>${escapeHtml(order.customer)}<br>Cashier: ${escapeHtml(order.cashierName || "Cashier 1")}<br>${escapeHtml(order.source || "In Store")}</p>
+      <p>Order #${order.id}<br>${displayOrderDate(dates, order.createdAt)}<br>${escapeHtml(order.customer)}<br>Cashier: ${escapeHtml(order.cashierName || "Cashier 1")}<br>${escapeHtml(order.source || "In Store")}</p>
       ${order.note ? `<p>Note: ${escapeHtml(order.note)}</p>` : ""}
-      ${order.items
+      ${(order.items || [])
         .flatMap((item) => Array.from({ length: Math.max(1, Math.floor(Number(item.qty) || 1)) }, () => item))
         .map(
           (item) => `
@@ -1324,10 +1333,10 @@
         .join("")}
       ${order.promo ? `<p>${escapeHtml(order.promo)}</p>` : ""}
       <hr>
-      <div class="receipt-line"><span>Subtotal</span><strong>${price(order.totals.subtotal)}</strong></div>
-      <div class="receipt-line"><span>Discount</span><strong>-${price(order.totals.discount)}</strong></div>
-      <div class="receipt-line"><span>Tax</span><strong>${price(order.totals.tax)}</strong></div>
-      <div class="receipt-line"><span>Total</span><strong>${price(order.totals.total)}</strong></div>
+      <div class="receipt-line"><span>Subtotal</span><strong>${price(order.totals?.subtotal)}</strong></div>
+      <div class="receipt-line"><span>Discount</span><strong>-${price(order.totals?.discount)}</strong></div>
+      <div class="receipt-line"><span>Tax</span><strong>${price(order.totals?.tax)}</strong></div>
+      <div class="receipt-line"><span>Total</span><strong>${price(order.totals?.total)}</strong></div>
       ${order.issuedCoupon ? `<hr><div class="receipt-coupon"><strong>${escapeHtml(order.issuedCoupon.message)}</strong><span>Use code: ${escapeHtml(order.issuedCoupon.code)}</span><small>Available ${new Date(order.issuedCoupon.availableAt).toLocaleDateString()} · Expires ${new Date(order.issuedCoupon.expiresAt).toLocaleDateString()}</small></div>` : ""}
       <p>${escapeHtml(selectedStore.receiptFooter ?? state.settings.receiptFooter)}</p>
     `;
@@ -1388,7 +1397,10 @@
 
   function renderOrders() {
     elements.ordersTableBody.innerHTML = "";
-    const orders = getSelectedStoreOrders(savedManagerOrders ?? state.orders);
+    const dates = orderDateTimeFormatter({ dateStyle: "medium", timeStyle: "short" });
+    const orders = getSavedStoreOrders().sort((first, second) =>
+      (Date.parse(second.createdAt) || 0) - (Date.parse(first.createdAt) || 0)
+    );
     if (!orders.length) {
       const row = document.createElement("tr");
       row.innerHTML = '<td colspan="8">No orders yet</td>';
@@ -1403,8 +1415,8 @@
         <td>${escapeHtml(order.orderType)}</td>
         <td>${escapeHtml(order.payment)}</td>
         <td>${escapeHtml(order.source || "In Store")}</td>
-        <td>${price(order.totals.total)}</td>
-        <td>${new Date(order.createdAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</td>
+        <td>${price(order.totals?.total)}</td>
+        <td>${displayOrderDate(dates, order.createdAt)}</td>
         <td><button class="secondary-button" type="button">Show Receipt</button></td>
       `;
       row.addEventListener("click", () => showReceipt(order));
@@ -1568,7 +1580,7 @@
     });
   }
 
-  function exportOrders(orders = getSelectedStoreOrders(), filename = "pos-orders.csv") {
+  function exportOrders(orders = getSavedStoreOrders(), filename = "pos-orders.csv") {
     const header = ["order", "customer", "type", "source", "payment", "subtotal", "discount", "tax", "total", "note", "created_at"];
     const rows = orders.map((order) => [
       order.id,
@@ -1576,10 +1588,10 @@
       order.orderType,
       order.source || "In Store",
       order.payment,
-      order.totals.subtotal.toFixed(2),
-      order.totals.discount.toFixed(2),
-      order.totals.tax.toFixed(2),
-      order.totals.total.toFixed(2),
+      (Number(order.totals?.subtotal) || 0).toFixed(2),
+      (Number(order.totals?.discount) || 0).toFixed(2),
+      (Number(order.totals?.tax) || 0).toFixed(2),
+      (Number(order.totals?.total) || 0).toFixed(2),
       order.note || "",
       order.createdAt,
     ]);

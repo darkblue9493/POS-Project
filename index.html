@@ -7,7 +7,7 @@
     <meta name="theme-color" content="#16241d" />
     <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="preload" href="./styles.css?v=20261028b" as="style" />
-    <link rel="preload" href="./app.js?v=20261121a" as="script" />
+    <link rel="preload" href="./app.js?v=20261121b" as="script" />
     <link rel="stylesheet" href="./styles.css?v=20261028b" />
   </head>
   <body>
@@ -81,12 +81,12 @@
           </header>
 
           <div class="dashboard-grid">
-            <article class="metric-tile unused-manager-control">
-              <span>Sales</span>
+            <article class="metric-tile">
+              <span>Today’s sales</span>
               <strong id="todaySales">$0.00</strong>
             </article>
             <article class="metric-tile">
-              <span>Tickets</span>
+              <span>Today’s tickets</span>
               <strong id="todayOrders">0</strong>
             </article>
             <article class="metric-tile">
@@ -288,8 +288,7 @@
         <section class="view" id="ordersView">
           <header class="workspace-header">
             <div>
-              <p class="eyebrow">Today</p>
-              <h2>Orders</h2>
+              <h2>Order History</h2>
             </div>
             <button class="secondary-button" id="exportOrdersButton" type="button">Export CSV</button>
           </header>
@@ -303,7 +302,7 @@
                   <th>Payment</th>
                   <th>Source</th>
                   <th>Total</th>
-                  <th>Time</th>
+                  <th>Date and time</th>
                   <th>Receipt</th>
                 </tr>
               </thead>
@@ -520,7 +519,7 @@
       </form>
     </dialog>
 
-    <script src="./app.js?v=20261121a"></script>
+    <script src="./app.js?v=20261121b"></script>
     <script>
       if ("serviceWorker" in navigator && location.protocol !== "file:") {
         navigator.serviceWorker.register("./service-worker.js");
