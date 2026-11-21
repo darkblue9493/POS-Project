@@ -7,7 +7,7 @@
     <meta name="theme-color" content="#16241d" />
     <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="preload" href="./styles.css?v=20261028b" as="style" />
-    <link rel="preload" href="./app.js?v=20261121b" as="script" />
+    <link rel="preload" href="./app.js?v=20261121c" as="script" />
     <link rel="stylesheet" href="./styles.css?v=20261028b" />
   </head>
   <body>
@@ -210,6 +210,7 @@
                 <button class="segment" type="button" data-order-type="pickup">Pickup</button>
                 <button class="segment" type="button" data-order-type="delivery">Delivery</button>
               </div>
+              <button class="secondary-button" data-export-cached-receipts type="button" hidden>Export device-only receipts</button>
               <button class="secondary-button fullscreen-button" id="fullscreenButton" type="button">Full screen</button>
               <button class="secondary-button logout-button" id="logoutButton" type="button">Log out</button>
             </div>
@@ -290,7 +291,10 @@
             <div>
               <h2>Order History</h2>
             </div>
-            <button class="secondary-button" id="exportOrdersButton" type="button">Export CSV</button>
+            <div class="header-actions">
+              <button class="secondary-button" data-export-cached-receipts type="button" hidden>Export device-only receipts</button>
+              <button class="secondary-button" id="exportOrdersButton" type="button">Export CSV</button>
+            </div>
           </header>
           <div class="orders-table-wrap">
             <table class="orders-table">
@@ -500,6 +504,15 @@
       </main>
     </div>
 
+    <dialog class="receipt-dialog" id="checkoutSaveDialog">
+      <h2>Checkout</h2>
+      <p id="checkoutSaveStatus" role="status">Saving order…</p>
+      <div class="dialog-actions">
+        <button class="primary-button" id="retryCheckoutButton" type="button" hidden>Retry save</button>
+        <button class="secondary-button" id="returnToTicketButton" type="button" hidden>Return to ticket</button>
+      </div>
+    </dialog>
+
     <dialog id="receiptDialog">
       <div class="receipt" id="receiptContent"></div>
       <div class="dialog-actions">
@@ -519,7 +532,7 @@
       </form>
     </dialog>
 
-    <script src="./app.js?v=20261121b"></script>
+    <script src="./app.js?v=20261121c"></script>
     <script>
       if ("serviceWorker" in navigator && location.protocol !== "file:") {
         navigator.serviceWorker.register("./service-worker.js");

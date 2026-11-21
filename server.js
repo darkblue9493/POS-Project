@@ -116,24 +116,22 @@ function sendJson(res, status, data) {
   send(res, status, JSON.stringify(data), "application/json; charset=utf-8");
 }
 
-function readBody(req) {
-  return new Promise((resolve, reject) => {
-    let body = "";
-    req.on("data", (chunk) => {
-      body += chunk;
-      if (body.length > 1_000_000) {
-        reject(new Error("Request is too large"));
-        req.destroy();
-      }
-    });
-    req.on("end", () => {
-      try {
-        resolve(body ? JSON.parse(body) : {});
-      } catch (error) {
-        reject(new Error("Invalid JSON"));
-      }
-    });
-  });
+async function readBody(req, limit = 1_000_000) {
+  const chunks = [];
+  let bytes = 0;
+  for await (const chunk of req.iterator({ destroyOnReturn: false })) {
+    bytes += chunk.length;
+    if (bytes > limit) {
+      req.resume();
+      throw Object.assign(new Error("Request is too large"), { status: 413 });
+    }
+    chunks.push(chunk);
+  }
+  try {
+    return JSON.parse(Buffer.concat(chunks).toString("utf8") || "{}");
+  } catch (error) {
+    throw new Error("Invalid JSON");
+  }
 }
 
 function getCookie(req, name) {
@@ -240,6 +238,7 @@ function writeDbFile(db) {
 
 async function supabaseRequest(pathname, options = {}) {
   const response = await fetch(`${supabaseUrl}${pathname}`, {
+    signal: AbortSignal.timeout(15_000),
     ...options,
     headers: {
       apikey: supabaseServiceRoleKey,
@@ -252,49 +251,82 @@ async function supabaseRequest(pathname, options = {}) {
   return response;
 }
 
-async function writeSupabaseState(db) {
-  await supabaseRequest("/rest/v1/pos_state", {
-    method: "POST",
-    headers: { Prefer: "resolution=merge-duplicates,return=minimal" },
-    body: JSON.stringify([{ id: "primary", state: db, updated_at: new Date().toISOString() }])
-  });
-}
+let localRevision = crypto.randomUUID();
 
 async function readDb() {
   if (!supabaseEnabled) {
     if (persistentStorageRequired) {
       throw new Error("Persistent storage is not configured. Add SUPABASE_SERVICE_ROLE_KEY in Render before using Vedrix POS.");
     }
-    return readDbFile();
+    return { state: readDbFile(), revision: localRevision };
   }
-  try {
-    const response = await supabaseRequest("/rest/v1/pos_state?id=eq.primary&select=state");
-    const rows = await response.json();
-    if (rows[0]?.state) return normalizeDb(rows[0].state);
-    const legacyState = readDbFile();
-    await writeSupabaseState(legacyState);
-    return legacyState;
-  } catch (error) {
-    if (persistentStorageRequired) {
-      throw new Error(`Persistent storage is unavailable: ${error.message}`);
-    }
-    console.error(`Supabase storage unavailable; using local storage: ${error.message}`);
-    return readDbFile();
+
+  const response = await supabaseRequest("/rest/v1/pos_state?id=eq.primary&select=state,updated_at");
+  const rows = await response.json();
+  if (!rows[0]?.state || !rows[0]?.updated_at) {
+    throw new Error("The primary Supabase state is missing. Check persistent storage before accepting orders.");
   }
+  return { state: normalizeDb(rows[0].state), revision: rows[0].updated_at };
 }
 
-async function writeDb(db) {
+async function writeDb(db, revision) {
   if (!supabaseEnabled) {
-    if (persistentStorageRequired) {
-      throw new Error("Persistent storage is not configured. Add SUPABASE_SERVICE_ROLE_KEY in Render before using Vedrix POS.");
-    }
+    if (revision !== localRevision) return null;
     writeDbFile(db);
-    return;
+    localRevision = crypto.randomUUID();
+    return localRevision;
   }
-  // Store to Supabase first. A failed cloud write must be visible to Vedrix
-  // instead of leaving the user with data that only exists until a restart.
-  await writeSupabaseState(db);
-  writeDbFile(db);
+
+  const updatedAt = new Date(Math.max(Date.now(), Date.parse(revision) + 1)).toISOString();
+  const query = new URLSearchParams({ id: "eq.primary", updated_at: `eq.${revision}`, select: "updated_at" });
+  const response = await supabaseRequest(`/rest/v1/pos_state?${query}`, {
+    method: "PATCH",
+    headers: { Prefer: "return=representation" },
+    body: JSON.stringify({ state: db, updated_at: updatedAt })
+  });
+  const rows = await response.json();
+  return rows[0]?.updated_at || null;
+}
+
+async function recordOrder(req, res, session) {
+  const { order, couponCode } = await readBody(req);
+  if (!order || typeof order.checkoutId !== "string" || !order.checkoutId ||
+      !Array.isArray(order.items) || !order.items.length ||
+      !order.items.every((item) => item && Number.isSafeInteger(item.qty) && item.qty > 0) ||
+      !Number.isFinite(Date.parse(order.createdAt)) || !Number.isFinite(order.totals?.total)) {
+    return sendJson(res, 400, { message: "The checkout data is incomplete." });
+  }
+  if (session.storeId && session.storeId !== order.storeId) {
+    return sendJson(res, 403, { message: "This register is signed in to a different store." });
+  }
+
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const { state, revision } = await readDb();
+    const existing = state.orders.find((saved) => saved.checkoutId === order.checkoutId && saved.storeId === order.storeId);
+    if (existing) return sendJson(res, 200, { order: existing, state, revision });
+    if (!state.stores.some((store) => store.id === order.storeId)) {
+      return sendJson(res, 409, { message: "The order’s store is no longer available." });
+    }
+    const redeemed = couponCode && state.coupons.find((coupon) =>
+      coupon.storeId === order.storeId && coupon.code === couponCode && !coupon.redeemedAt
+    );
+    if (couponCode && !redeemed) {
+      return sendJson(res, 422, { message: "This coupon has already been used or is unavailable." });
+    }
+    const id = state.orders.reduce((next, saved) => Math.max(next, (Number(saved.id) || 0) + 1), Number(state.nextOrderNumber) || 1001);
+    const completed = { ...order, id };
+    if (redeemed) redeemed.redeemedAt = completed.createdAt;
+    if (completed.issuedCoupon) state.coupons.unshift(completed.issuedCoupon);
+    for (const line of completed.items) {
+      const item = state.items.find((candidate) => candidate.id === line.id && candidate.storeId === completed.storeId);
+      if (item) item.stock = Math.max(0, (Number(item.stock) || 0) - line.qty);
+    }
+    state.orders.unshift(completed);
+    state.nextOrderNumber = id + 1;
+    const savedRevision = await writeDb(state, revision);
+    if (savedRevision) return sendJson(res, 201, { order: completed, state, revision: savedRevision });
+  }
+  sendJson(res, 409, { message: "Other registers are saving orders. Retry this checkout." });
 }
 
 async function handleApi(req, res, url) {
@@ -325,7 +357,7 @@ async function handleApi(req, res, url) {
   if (req.method === "POST" && url.pathname === "/api/login") {
     const body = await readBody(req);
     const role = body.mode === "back-office" ? "back-office" : "register";
-    const db = await readDb();
+    const { state: db, revision } = await readDb();
     const requestedStore = db.stores.find((store) => store.id === body.storeId);
     const pin = String(body.pin || "");
     let loginStore = null;
@@ -364,7 +396,7 @@ async function handleApi(req, res, url) {
       "content-type": "application/json; charset=utf-8",
       "set-cookie": `pos_session=${encodeURIComponent(token)}; HttpOnly; SameSite=Lax; Path=/; Max-Age=${sessionCookieMaxAgeSeconds}`
     });
-    res.end(JSON.stringify({ ok: true, storeId: loginStore?.id || null, cashierName: loginUser?.name || "Cashier 1", state: db }));
+    res.end(JSON.stringify({ ok: true, storeId: loginStore?.id || null, cashierName: loginUser?.name || "Cashier 1", state: db, revision }));
     return;
   }
 
@@ -385,13 +417,23 @@ async function handleApi(req, res, url) {
 
   if (req.method === "GET" && url.pathname === "/api/state") {
     const session = getSession(req);
-    sendJson(res, 200, { ok: true, state: await readDb(), session: { role: session?.role, storeId: session?.storeId, cashierName: session?.cashierName || "Cashier 1" } });
+    sendJson(res, 200, { ok: true, ...await readDb(), session: { role: session?.role, storeId: session?.storeId, cashierName: session?.cashierName || "Cashier 1" } });
+    return;
+  }
+
+  if (req.method === "POST" && url.pathname === "/api/orders") {
+    await recordOrder(req, res, getSession(req));
     return;
   }
 
   if (req.method === "PUT" && url.pathname === "/api/state") {
-    const body = await readBody(req);
-    await writeDb({
+    const body = await readBody(req, 32_000_000);
+    const { state, revision } = await readDb();
+    if (revision !== body.revision) {
+      return sendJson(res, 409, { message: "Shared data changed. Reload before retrying your changes." });
+    }
+    const savedRevision = await writeDb({
+      ...state,
       menuVersion: body.menuVersion || defaultDb.menuVersion,
       stores: Array.isArray(body.stores) && body.stores.length ? body.stores : defaultDb.stores,
       registers: Array.isArray(body.registers) && body.registers.length ? body.registers : defaultDb.registers,
@@ -403,8 +445,11 @@ async function handleApi(req, res, url) {
       nextOrderNumber: Number(body.nextOrderNumber) || 1001,
       items: Array.isArray(body.items) ? body.items : [],
       orders: Array.isArray(body.orders) ? body.orders : []
-    });
-    sendJson(res, 200, { ok: true });
+    }, revision);
+    if (!savedRevision) {
+      return sendJson(res, 409, { message: "Shared data changed. Reload before retrying your changes." });
+    }
+    sendJson(res, 200, { ok: true, revision: savedRevision });
     return;
   }
 
@@ -422,7 +467,7 @@ const server = http.createServer((req, res) => {
   const url = new URL(req.url, `http://${req.headers.host}`);
 
   if (url.pathname.startsWith("/api/")) {
-    handleApi(req, res, url).catch((error) => sendJson(res, 400, { ok: false, message: error.message }));
+    handleApi(req, res, url).catch((error) => sendJson(res, error.status || 400, { ok: false, message: error.message }));
     return;
   }
 

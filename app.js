@@ -231,6 +231,11 @@
   let state = loadState();
   let hydrated = !remoteMode;
   let savedManagerState = null;
+  let stateRevision = null;
+  let savingCheckout = false;
+  const pendingCheckoutKey = `${storageKey}.pendingCheckout`;
+  const receiptBackupKey = `${storageKey}.receiptBackup`;
+  const originalCachedOrders = state.orders;
   let saveTimer = null;
   const appMode = getAppMode();
   let loginRole = appMode;
@@ -387,12 +392,29 @@
       hasOnlyBaselineItems(saved.items) && hasOnlyBaselineStores(saved.stores) && JSON.stringify(saved.settings || {}) === JSON.stringify(defaultState.settings));
   }
 
+  function cacheState() {
+    if (!hydrated) return;
+    try {
+      if (remoteMode) {
+        const missing = getCachedReceipts();
+        if (missing.length) localStorage.setItem(receiptBackupKey, JSON.stringify(missing));
+      }
+      localStorage.setItem(storageKey, JSON.stringify(state));
+    } catch (error) {
+      // Shared orders are saved by the server even if this device's cache is full.
+      if (!remoteMode) throw error;
+    }
+  }
+
   function saveState() {
     if (!hydrated) return;
-    localStorage.setItem(storageKey, JSON.stringify(state));
+    cacheState();
     if (remoteMode) {
       clearTimeout(saveTimer);
-      saveTimer = setTimeout(saveRemoteState, 250);
+      saveTimer = setTimeout(async () => {
+        await saveRemoteState();
+        saveTimer = null;
+      }, 250);
     }
   }
 
@@ -402,8 +424,10 @@
       headers: { "content-type": "application/json", ...(options.headers || {}) },
       ...options,
     });
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.message || "Request failed");
+    const data = await response.json().catch(() => null);
+    if (!response.ok || !data) {
+      throw Object.assign(new Error(data?.message || `Request failed (${response.status})`), { status: response.status });
+    }
     return data;
   }
 
@@ -424,6 +448,7 @@
       };
       currentCashierName = preferredCashierName || data.session?.cashierName || "Cashier 1";
       hydrated = true;
+      stateRevision = data.revision;
       if (recoverCachedState) {
         // If a hosted database was temporarily empty, preserve the data still
         // cached on this POS device instead of replacing it with starter data.
@@ -432,6 +457,9 @@
       setLoginVisible(false);
       if (appMode === "back-office") savedManagerState = state;
       setView(getAllowedViews()[0]);
+      if (appMode === "register" && getPendingCheckout()?.order.storeId === state.selectedStoreId) {
+        completeOrder();
+      }
     } catch (error) {
       setLoginVisible(true);
       elements.loginMessage.textContent = error.message === "Login required" ? "" : error.message;
@@ -441,9 +469,10 @@
   async function saveRemoteState() {
     if (!remoteMode || !hydrated) return;
     try {
-      await api("/api/state", {
+      const saved = await api("/api/state", {
         method: "PUT",
         body: JSON.stringify({
+          revision: stateRevision,
           settings: state.settings,
           menuVersion: state.menuVersion,
           stores: state.stores,
@@ -457,15 +486,17 @@
           coupons: state.coupons,
         }),
       });
+      stateRevision = saved.revision;
       if (appMode === "back-office") await refreshRemoteState();
     } catch (error) {
-      elements.modeLabel.textContent = "Offline changes";
+      elements.modeLabel.textContent = `Save failed: ${error.message}`;
     }
   }
 
   async function persistNow() {
     if (!remoteMode || !hydrated) return;
     clearTimeout(saveTimer);
+    saveTimer = null;
     await saveRemoteState();
   }
 
@@ -557,7 +588,6 @@
     let code = "";
     do { code = Array.from({ length: 7 }, () => "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"[Math.floor(Math.random() * 32)]).join(""); } while (state.coupons.some((coupon) => coupon.code === code));
     const coupon = { id: uid("coupon"), code, storeId: store.id, percent, message: String(store.couponMessage || "Get {percent}% off on your next visit").replaceAll("{percent}", String(percent)), createdAt: createdAt.toISOString(), availableAt: availableAt.toISOString(), expiresAt: expiresAt.toISOString(), redeemedAt: "" };
-    state.coupons.unshift(coupon);
     return coupon;
   }
 
@@ -608,9 +638,11 @@
   }
 
   async function refreshRemoteState() {
-    if (!remoteMode || !hydrated || document.hidden) return;
+    if (!remoteMode || !hydrated || document.hidden || savingCheckout) return;
+    const revision = stateRevision;
     try {
       const data = await api("/api/state");
+      if (savingCheckout || revision !== stateRevision) return;
       if (appMode === "back-office") {
         savedManagerState = data.state;
         renderDashboard();
@@ -618,6 +650,8 @@
         renderReports();
         return;
       }
+      if (saveTimer) return;
+      stateRevision = data.revision;
       const selectedStoreId = data.session?.storeId || state.selectedStoreId;
       const cart = state.cart;
       const activeCategory = state.activeCategory;
@@ -943,6 +977,18 @@
     });
   }
 
+  function getCachedReceipts() {
+    const keyFor = (order) => order.checkoutId || JSON.stringify([order.storeId, order.id, order.createdAt]);
+    const saved = new Set((savedManagerState?.orders ?? state.orders).map(keyFor));
+    const backup = JSON.parse(localStorage.getItem(receiptBackupKey) || "[]");
+    const missing = new Map();
+    for (const order of [...backup, ...originalCachedOrders]) {
+      const key = keyFor(order);
+      if (!saved.has(key)) missing.set(key, order);
+    }
+    return [...missing.values()];
+  }
+
   function getSavedStoreOrders() {
     return getSelectedStoreOrders(savedManagerState?.orders ?? state.orders);
   }
@@ -1135,7 +1181,8 @@
       button.textContent = category;
       button.addEventListener("click", () => {
         state.activeCategory = category;
-        render();
+        render(true);
+        cacheState();
       });
       elements.categoryStrip.appendChild(button);
     });
@@ -1175,7 +1222,7 @@
       state.cart.push({ ...item, qty: 1 });
     }
     renderCart();
-    saveState();
+    cacheState();
   }
 
   function normalizeBarcode(value) {
@@ -1259,16 +1306,60 @@
     line.qty += delta;
     state.cart = state.cart.filter((item) => item.qty > 0);
     renderCart();
-    saveState();
+    cacheState();
   }
 
-  function completeOrder() {
+  function getPendingCheckout() {
+    return JSON.parse(localStorage.getItem(pendingCheckoutKey) || "null");
+  }
+
+  async function saveCheckout(checkout) {
+    const dialog = document.getElementById("checkoutSaveDialog");
+    const status = document.getElementById("checkoutSaveStatus");
+    const retry = document.getElementById("retryCheckoutButton");
+    const returnToTicket = document.getElementById("returnToTicketButton");
+    savingCheckout = true;
+    if (!dialog.open) dialog.showModal();
+    status.textContent = "Saving order…";
+    retry.hidden = true;
+    returnToTicket.hidden = true;
+    try {
+      localStorage.setItem(pendingCheckoutKey, JSON.stringify(checkout));
+      const saved = await api("/api/orders", {
+        method: "POST",
+        body: JSON.stringify(checkout),
+        signal: AbortSignal.timeout(45_000),
+      });
+      stateRevision = saved.revision;
+      Object.assign(state, saved.state);
+      localStorage.removeItem(pendingCheckoutKey);
+      finishCheckout();
+      dialog.close();
+      showReceipt(saved.order);
+    } catch (error) {
+      status.textContent = `Order save was not confirmed. ${error.message}`;
+      retry.hidden = false;
+      returnToTicket.hidden = error.status !== 422;
+    } finally {
+      savingCheckout = false;
+    }
+  }
+
+  async function completeOrder() {
+    if (savingCheckout) return;
+    if (remoteMode) {
+      const pending = getPendingCheckout();
+      if (pending) {
+        if (pending.order.storeId === state.selectedStoreId) await saveCheckout(pending);
+        else window.alert("A checkout is pending for another store. Sign in to that store to retry it.");
+        return;
+      }
+    }
     if (!state.cart.length) return;
     const totals = getCartTotals();
     const store = getSelectedStore();
     const issuedCoupon = createCoupon(store);
     const redeemedCoupon = state.coupons.find((coupon) => coupon.code === state.activeCouponCode && !coupon.redeemedAt);
-    if (redeemedCoupon) redeemedCoupon.redeemedAt = new Date().toISOString();
     const order = {
       id: state.nextOrderNumber,
       customer: elements.customerName.value.trim() || "Walk-in",
@@ -1290,19 +1381,31 @@
       issuedCoupon,
       createdAt: new Date().toISOString(),
     };
+    if (remoteMode) {
+      order.checkoutId = globalThis.crypto?.randomUUID?.() || uid("checkout");
+      await saveCheckout({ order, couponCode: redeemedCoupon?.code });
+      return;
+    }
+    if (redeemedCoupon) redeemedCoupon.redeemedAt = order.createdAt;
+    if (issuedCoupon) state.coupons.unshift(issuedCoupon);
     state.orders.unshift(order);
     state.nextOrderNumber += 1;
     state.cart.forEach((line) => {
       const item = state.items.find((candidate) => candidate.id === line.id && candidate.storeId === state.selectedStoreId);
       if (item) item.stock = Math.max(0, (Number(item.stock) || 0) - line.qty);
     });
+    finishCheckout();
+    showReceipt(order);
+  }
+
+  function finishCheckout() {
     state.cart = [];
     elements.customerName.value = "";
     elements.ticketNote.value = "";
-    showReceipt(order);
     state.manualDiscount = 0;
     state.activeCouponCode = "";
-    render();
+    cacheState();
+    render(true);
   }
 
   function getMostRecentOrder() {
@@ -1398,6 +1501,8 @@
   function renderOrders() {
     elements.ordersTableBody.innerHTML = "";
     const dates = orderDateTimeFormatter({ dateStyle: "medium", timeStyle: "short" });
+    const hasCachedReceipts = remoteMode && getSelectedStoreOrders(getCachedReceipts()).length > 0;
+    document.querySelectorAll("[data-export-cached-receipts]").forEach((button) => { button.hidden = !hasCachedReceipts; });
     const orders = getSavedStoreOrders().sort((first, second) =>
       (Date.parse(second.createdAt) || 0) - (Date.parse(first.createdAt) || 0)
     );
@@ -1596,7 +1701,10 @@
       order.createdAt,
     ]);
     const csv = [header, ...rows].map((row) => row.map(csvValue).join(",")).join("\n");
-    const blob = new Blob([csv], { type: "text/csv" });
+    downloadFile(new Blob([csv], { type: "text/csv" }), filename);
+  }
+
+  function downloadFile(blob, filename) {
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
     link.download = filename;
@@ -1653,7 +1761,7 @@
     state.activeCategory = "All";
     state.cart = [];
     render(true);
-    if (hydrated) localStorage.setItem(storageKey, JSON.stringify(state));
+    cacheState();
   });
   document.querySelectorAll("[data-jump-register]").forEach((button) => button.addEventListener("click", () => setView("register")));
   document.querySelectorAll("[data-jump-items]").forEach((button) => button.addEventListener("click", () => setView("items")));
@@ -1664,14 +1772,14 @@
     button.addEventListener("click", () => {
       state.orderType = button.dataset.orderType;
       elements.orderTypeButtons.forEach((candidate) => candidate.classList.toggle("active", candidate === button));
-      saveState();
+      cacheState();
     });
   });
   elements.paymentButtons.forEach((button) => {
     button.addEventListener("click", () => {
       state.payment = button.dataset.payment;
       elements.paymentButtons.forEach((candidate) => candidate.classList.toggle("active", candidate === button));
-      saveState();
+      cacheState();
     });
   });
   elements.itemSearch.addEventListener("input", renderMenu);
@@ -1683,12 +1791,24 @@
     }
   });
   elements.checkoutButton.addEventListener("click", completeOrder);
+  document.getElementById("retryCheckoutButton").addEventListener("click", completeOrder);
+  document.getElementById("checkoutSaveDialog").addEventListener("cancel", (event) => event.preventDefault());
+  document.getElementById("returnToTicketButton").addEventListener("click", () => {
+    const pending = getPendingCheckout();
+    state.cart = pending.order.items;
+    elements.customerName.value = pending.order.customer;
+    elements.ticketNote.value = pending.order.note;
+    state.activeCouponCode = "";
+    localStorage.removeItem(pendingCheckoutKey);
+    document.getElementById("checkoutSaveDialog").close();
+    renderCart();
+  });
   elements.clearCartButton.addEventListener("click", () => {
     state.cart = [];
     state.manualDiscount = 0;
     state.activeCouponCode = "";
     renderCart();
-    saveState();
+    cacheState();
   });
   elements.openWasteButton.addEventListener("click", () => {
     elements.wasteItemSelect.innerHTML = "";
@@ -1729,6 +1849,12 @@
     await persistNow();
   });
   elements.exportOrdersButton.addEventListener("click", () => exportOrders());
+  document.querySelectorAll("[data-export-cached-receipts]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const orders = getSelectedStoreOrders(getCachedReceipts());
+      downloadFile(new Blob([JSON.stringify(orders, null, 2)], { type: "application/json" }), "vedrix-device-receipts.json");
+    });
+  });
   elements.purgeMode.addEventListener("change", updatePurgeControls);
   elements.purgeBeforeDate.addEventListener("change", renderPurgePreview);
   elements.purgeMonth.addEventListener("change", renderPurgePreview);
@@ -1899,10 +2025,7 @@
   elements.registerLoginButton.addEventListener("click", () => setLoginRole("register"));
   elements.managerLoginButton.addEventListener("click", () => setLoginRole("back-office"));
   async function logout() {
-    if (remoteMode && hydrated) {
-      clearTimeout(saveTimer);
-      await saveRemoteState();
-    }
+    if (remoteMode && hydrated && saveTimer) await persistNow();
     try {
       await api("/api/logout", { method: "POST" });
     } catch (error) {
@@ -1926,7 +2049,7 @@
   document.querySelectorAll("[data-void-line]").forEach((button) => button.addEventListener("click", () => {
     state.cart.pop();
     renderCart();
-    saveState();
+    cacheState();
   }));
   document.querySelectorAll("[data-start-over]").forEach((button) => button.addEventListener("click", () => {
     state.cart = [];
@@ -1934,7 +2057,7 @@
     elements.customerName.value = "";
     elements.ticketNote.value = "";
     renderCart();
-    saveState();
+    cacheState();
   }));
   document.querySelectorAll("[data-show-last-receipt], [data-reprint-last]").forEach((button) => button.addEventListener("click", () => {
     const order = getMostRecentOrder();
@@ -1952,7 +2075,7 @@
     }
     state.manualDiscount = Math.min(subtotal, amount);
     renderCart();
-    saveState();
+    cacheState();
   }));
   document.addEventListener("keydown", (event) => {
     if (appMode !== "register" || elements.loginScreen.hidden === false) return;
@@ -1973,7 +2096,7 @@
       event.preventDefault();
       state.cart = [];
       renderCart();
-      saveState();
+      cacheState();
       return;
     }
     if (!isTyping && event.key === "/") {
@@ -1993,7 +2116,7 @@
         location.assign("./back-office.html");
         return;
       }
-      await loadRemoteState(login.storeId || "", login.cashierName || "", login.state ? { state: login.state, session: login } : null);
+      await loadRemoteState(login.storeId || "", login.cashierName || "", login.state ? { state: login.state, revision: login.revision, session: login } : null);
     } catch (error) {
       elements.loginMessage.textContent = error.message;
     }
